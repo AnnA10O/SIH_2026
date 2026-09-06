@@ -1,0 +1,12 @@
+gagan_station_id,region_name,gagan_lat,gagan_lon,gagan_coverage_pct,gagan_iwv_mean,n_aws_pass,aws_monsoon_coverage_pct,aws_spacing_score,composite_score,aws_station_ids
+13,Guwahati,26.1202,91.5904,97.84,40.0,10,37.8,0.809,0.8105,ISRO0065_15F041(BONGAIGAON)|ISRO0066_15F042(GOSSAIGAON)|ISRO0067_15F043(NALBARI)|ISRO0069_15F045(ARUNACHAL)|ISRO0076_15F04C(Dhubri)|ISRO1074_15F432(Salonah)|ISRO1101_15F44D(Regional Science Centre. Khanpara. Guwhathi)|ISRO1102_15F44E(North Guwhathi College. North Guwhathi)|ISRO1106_15F452(Rangiya Degree College. Rangiya)|ISRO1112_15F458(President. Gharowa. Lumding)
+11,Bagdogra,26.6846,88.3255,85.87,37.55,2,27.0,0.205,0.453,ISRO0066_15F042(GOSSAIGAON)|ISRO0076_15F04C(Dhubri)
+12,Lengpui,23.84,92.6236,95.11,33.06,1,24.2,0.0,0.3682,ISRO0069_15F045(ARUNACHAL)
+4,Hyderabad,17.4496,78.4703,97.83,32.12,0,0.0,0.0,0.2446,
+17,Gaya,24.7468,84.9454,97.55,36.49,0,0.0,0.0,0.2439,
+1,Madurai,9.8371,78.0914,93.51,45.46,0,0.0,0.0,0.2338,
+14,Kolkata,22.6447,88.4478,91.56,39.24,0,0.0,0.0,0.2289,
+26,Bhubaneswar,20.2544,85.8087,89.71,39.98,0,0.0,0.0,0.2243,
+16,Vizag,17.7278,83.226,89.11,42.01,0,0.0,0.0,0.2228,
+28,Jodhpur,26.2637,73.0506,86.4,25.66,0,0.0,0.0,0.216,
+21,Ahmedabad2,23.0641,72.6196,85.51,32.91,0,0.0,0.0,0.2138,

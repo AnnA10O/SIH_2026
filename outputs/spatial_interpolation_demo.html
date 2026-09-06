@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 5: Spatial Interpolation & 4km Mesh Engine (PS 26077)</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --surface: #111827;
+            --surface-card: #1e293b;
+            --border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-purple: #a855f7;
+            --red: #ef4444;
+            --orange: #f97316;
+            --yellow: #eab308;
+            --green: #22c55e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text-main); line-height: 1.6; padding: 30px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { font-size: 28px; color: #fff; display: flex; align-items: center; gap: 12px; }
+        .badge { background: #0369a1; color: #bae6fd; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+        .subtitle { color: var(--text-muted); font-size: 15px; margin-top: 6px; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+        .card h2 { font-size: 18px; color: var(--accent-blue); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        
+        .math-box { background: #0b1120; border-left: 4px solid var(--accent-purple); padding: 14px 18px; border-radius: 6px; font-family: "Courier New", monospace; font-size: 14px; margin: 12px 0; color: #e2e8f0; overflow-x: auto; }
+        .formula { font-weight: bold; color: #38bdf8; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #1e293b; color: #cbd5e1; font-weight: 600; }
+        tr:hover { background: rgba(255,255,255,0.02); }
+
+        .tag-red { color: var(--red); font-weight: 700; }
+        .tag-orange { color: var(--orange); font-weight: 700; }
+        .tag-yellow { color: var(--yellow); font-weight: 700; }
+        .tag-green { color: var(--green); font-weight: 700; }
+
+        .image-container { text-align: center; margin: 25px 0; background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .image-container img { max-width: 100%; height: auto; border-radius: 8px; }
+
+        .highlight-box { background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 16px; margin-top: 20px; }
+        .highlight-title { font-weight: 700; color: var(--accent-blue); margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Module 5: Spatial Interpolation on Continuous 4km Mesh <span class="badge">PS 26077 / MoES</span></h1>
+            <p class="subtitle">Converting sparse point-station AWS detections into a gap-free continuous convective risk field using IDW and Gaussian Kernels.</p>
+        </header>
+
+        <div class="card" style="margin-bottom: 25px;">
+            <h2>The Core Meteorological Problem: The "Inter-Station Blind Spot"</h2>
+            <p>Cloudburst convective cores typically measure <strong>4 to 5 km in diameter</strong>, whereas automated weather stations (AWS) in India's Northeast hills are spaced <strong>15 to 50 km apart</strong>. A catastrophic 100mm storm can easily develop and dump between gauges without striking a single rain funnel.</p>
+            <div class="highlight-box">
+                <div class="highlight-title">The Engineering Solution:</div>
+                Discretize the region into a continuous <strong>0.04° (~4.4 km) mesh grid</strong> matching INSAT/Kalpana-1 infrared pixel resolution. Every 4km grid cell estimates its own continuous probability $P(\text{CB})_{x,y}$ by querying all surrounding stations via <strong>Inverse Distance Weighting (IDW)</strong> or <strong>Gaussian Kernel Decays</strong>.
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- IDW Card -->
+            <div class="card">
+                <h2>1. Inverse Distance Weighting (IDW, p = 2)</h2>
+                <p>Computes weights inversely proportional to Euclidean geodesic distance:</p>
+                <div class="math-box">
+                    <span class="formula">d_i(x, y)</span> = √[ (111·Δlat)² + (111·cos(θ)·Δlon)² ]<br><br>
+                    <span class="formula">w_i(x, y)</span> = 1 / max(d_i, 2.0km)^p  (p = 2.0)<br><br>
+                    <span class="formula">P_grid(x, y)</span> = ∑(w_i · P_i) / ∑(w_i)
+                </div>
+                <p><strong>Physical Characteristics:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 8px; font-size: 14px; color: var(--text-muted);">
+                    <li><strong>Exact preservation:</strong> At a weather station ($d \to 0$), the interpolated probability strictly equals the station's measured score.</li>
+                    <li><strong>Sharp gradient:</strong> Preserves the steep, high-shear boundary of convective storm cores.</li>
+                </ul>
+            </div>
+
+            <!-- Gaussian Card -->
+            <div class="card">
+                <h2>2. Gaussian Kernel Weighting (σ = 14 km)</h2>
+                <p>Applies a smooth radial basis function reflecting atmospheric atmospheric diffusion:</p>
+                <div class="math-box">
+                    <span class="formula">w_i(x, y)</span> = exp( - d_i(x, y)² / (2 · σ²) )<br><br>
+                    <span class="formula">P_grid(x, y)</span> = ∑(w_i · P_i) / ∑(w_i)
+                </div>
+                <p><strong>Physical Characteristics:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 8px; font-size: 14px; color: var(--text-muted);">
+                    <li><strong>Mesoscale diffusion:</strong> Models atmospheric moisture dispersion across valleys.</li>
+                    <li><strong>No singularity:</strong> Smooth decay curve with no bullseye artifacts around isolated stations.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Visual Diagram -->
+        <div class="image-container">
+            <h3 style="color: #fff; margin-bottom: 12px; font-size: 16px;">Demonstration Output: 4km Spatial Interpolation Over Guwahati Valley</h3>
+            <img src="spatial_interpolation_demo.png" alt="Spatial Interpolation 4km Mesh Graphic">
+        </div>
+
+        <!-- Concrete Worked Numerical Example -->
+        <div class="card">
+            <h2>Concrete Step-by-Step Calculation for an Ungauged Point</h2>
+            <p>Evaluating an intermediate ungauged community: <strong>Jalukbari / Gauhati University (26.150°N, 91.660°E)</strong> between Khanapara Core and Nalbari AWS:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Station Name</th>
+                        <th>Measured $P(\text{CB})$</th>
+                        <th>Alert Tier</th>
+                        <th>Distance to Jalukbari ($d$)</th>
+                        <th>IDW Weight ($w = 1/d^2$)</th>
+                        <th>Gaussian Weight ($\sigma=14\text{km}$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>North Guwahati College</strong></td>
+                        <td><span class="tag-orange">0.65</span></td>
+                        <td>ORANGE</td>
+                        <td><strong>8.0 km</strong></td>
+                        <td>0.015527 (73.2% influence)</td>
+                        <td>0.848489 (58.0% influence)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Khanapara (Guwahati Core)</strong></td>
+                        <td><span class="tag-red">0.88</span></td>
+                        <td>RED</td>
+                        <td><strong>15.9 km</strong></td>
+                        <td>0.003955 (18.6% influence)</td>
+                        <td>0.524625 (35.8% influence)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rangiya College</strong></td>
+                        <td><span class="tag-yellow">0.35</span></td>
+                        <td>YELLOW</td>
+                        <td><strong>31.1 km</strong></td>
+                        <td>0.001035 (4.9% influence)</td>
+                        <td>0.085126 (5.8% influence)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Nalbari AWS</strong></td>
+                        <td><span class="tag-green">0.12</span></td>
+                        <td>GREEN</td>
+                        <td><strong>45.3 km</strong></td>
+                        <td>0.000487 (2.3% influence)</td>
+                        <td>0.005324 (0.4% influence)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bongaigaon AWS</strong></td>
+                        <td><span class="tag-green">0.04</span></td>
+                        <td>GREEN</td>
+                        <td><strong>87.0 km</strong></td>
+                        <td>0.000132 (0.6% influence)</td>
+                        <td>0.000000 (~0.0% influence)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Salonah AWS</strong></td>
+                        <td><span class="tag-green">0.18</span></td>
+                        <td>GREEN</td>
+                        <td><strong>96.8 km</strong></td>
+                        <td>0.000107 (0.5% influence)</td>
+                        <td>0.000000 (~0.0% influence)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="math-box" style="margin-top: 18px;">
+                <strong>Resulting Interpolated Alert at Jalukbari:</strong><br>
+                • Via IDW: <strong>P(CB) = 0.6599 (ORANGE ALERT / HIGH RISK)</strong><br>
+                • Via Gaussian Kernel: <strong>P(CB) = 0.7131 (ORANGE ALERT / HIGH RISK)</strong>
+            </div>
+
+            <p style="font-size: 14px; color: var(--text-muted); margin-top: 10px;">
+                Even though Jalukbari has <strong>no rain gauge</strong>, the spatial engine accurately assigns it an <strong>Orange Alert (High Risk)</strong> because it lies 8 km from North Guwahati and 15.9 km from the Khanapara convective core, preventing an inter-station warning failure.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
