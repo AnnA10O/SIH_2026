@@ -34,7 +34,7 @@
     font-family:var(--font-ui);
     background:var(--bg);
     color:var(--text);
-    overflow:hidden;
+    overflow:hidden; /* Body shouldn't scroll, screens will handle their own scroll */
   }
 
   button, input{font-family:inherit;}
@@ -186,7 +186,10 @@
   #screen-feed{
     background: radial-gradient(circle at 50% 30%, #111a30 0%, #060913 100%);
     overflow-y:auto;
-    position: relative;
+    -webkit-overflow-scrolling: touch;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    height: 100vh;
   }
   
   /* Particle Canvas & Light Beam */
@@ -400,8 +403,10 @@
   </section>
 
   <section id="screen-feed" class="screen">
-    <canvas id="bg-canvas"></canvas>
-    <div class="light-beam"></div>
+    <div id="bg-canvas-container" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;">
+        <canvas id="bg-canvas"></canvas>
+        <div class="light-beam"></div>
+    </div>
     <div id="feed-wrap">
       <table id="feed-table">
         <thead>
@@ -470,62 +475,13 @@
     });
   });
 
-  /* ================= zones ================= */
-  var zonesData = [
-    { id:'UK-1', lat:30.7346, lng:79.0669, hw:0.055 },
-    { id:'UK-2', lat:30.2844, lng:78.9811, hw:0.065 },
-    { id:'UK-3', lat:30.6963, lng:79.0227, hw:0.045 },
-    { id:'UK-4', lat:30.6377, lng:79.0417, hw:0.045 },
-    { id:'UK-5', lat:30.5326, lng:79.0795, hw:0.055 },
-    { id:'UK-6', lat:30.4000, lng:79.3200, hw:0.075 },
-    { id:'UK-7', lat:30.5620, lng:79.5641, hw:0.065 },
-    { id:'AS-1', lat:26.1445, lng:91.7362, hw:0.11 },
-    { id:'AS-2', lat:26.6528, lng:92.7926, hw:0.11 },
-    { id:'AS-3', lat:26.7509, lng:94.2037, hw:0.11 },
-    { id:'AS-4', lat:27.4728, lng:94.9120, hw:0.11 },
-    { id:'AS-5', lat:27.2360, lng:94.1050, hw:0.09 },
-    { id:'AS-6', lat:26.9500, lng:94.1700, hw:0.09 },
-    { id:'AS-7', lat:27.4833, lng:94.5833, hw:0.09 }
-  ];
-
-  function boxBounds(lat,lng,hw){ return [[lat-hw,lng-hw],[lat+hw,lng+hw]]; }
-
-  var allBounds = [];
-  zonesData.forEach(function(z){
-    var b = boxBounds(z.lat, z.lng, z.hw);
-    allBounds.push(b[0], b[1]);
-  });
-  map.fitBounds(allBounds, { padding:[40,40] });
-
-
-
   /* ================= stations ================= */
   var awsGroup = L.layerGroup().addTo(map);
   var satGroup = L.layerGroup().addTo(map);
+  var allBounds = [];
 
-  var awsStations = [
-    [30.742,79.075],[30.291,78.965],[30.703,79.030],[30.630,79.050],
-    [30.540,79.088],[30.408,79.335],[30.555,79.552],
-    [26.150,91.750],[26.660,92.805],[26.742,94.190],[27.480,94.900],
-    [27.228,94.112],[26.958,94.165],[27.490,94.575]
-  ];
-  var satStations = [
-    [30.80,79.15],[30.35,79.00],[30.60,79.45],
-    [26.30,91.90],[26.85,92.60],[27.05,94.35],[27.55,94.75],[26.60,94.00]
-  ];
-
-  awsStations.forEach(function(p){
-    L.circleMarker(p, {
-      radius:4, weight:1.5, interactive:false,
-      color:'#8fc3ef', fillColor:'#4c8ddb', fillOpacity:0.9
-    }).addTo(awsGroup);
-  });
-  satStations.forEach(function(p){
-    L.circleMarker(p, {
-      radius:4, weight:1.5, interactive:false,
-      color:'#c7abec', fillColor:'#9b6fd1', fillOpacity:0.9
-    }).addTo(satGroup);
-  });
+  // Map markers track by ID so we don't duplicate them
+  var renderedMarkers = {};
 
   document.getElementById('toggle-aws').addEventListener('change', function(e){
     if(e.target.checked) awsGroup.addTo(map); else map.removeLayer(awsGroup);
@@ -545,13 +501,6 @@
   /* ================= feed screen ================= */
   var feedBody = document.getElementById('feed-body');
   var state = {};
-  
-  var ALL_STATIONS = [
-    { id:'UK-1', gate:'a' }, { id:'UK-2', gate:'a' }, { id:'UK-3', gate:'a' }, { id:'UK-4', gate:'a' },
-    { id:'UK-5', gate:'b' }, { id:'UK-6', gate:'b' }, { id:'UK-7', gate:'b' },
-    { id:'AS-1', gate:'a' }, { id:'AS-2', gate:'a' }, { id:'AS-3', gate:'a' }, { id:'AS-4', gate:'a' },
-    { id:'AS-5', gate:'b' }, { id:'AS-6', gate:'b' }, { id:'AS-7', gate:'b' }
-  ];
 
   // Keys already surfaced in the main row / not useful raw metrics.
   var DETAIL_SKIP_KEYS = { id:1, gate:1, gate_a:1, gate_b:1, P_CB:1, pinn:1 };
@@ -647,7 +596,24 @@
        state[ch.id] = { prev2:null, prev1:null, cur:null };
   }
 
-  ALL_STATIONS.forEach(initStationRow);
+  function addMapMarker(id, lat, lon, isSat) {
+      if (!lat || !lon || renderedMarkers[id]) return;
+      var p = [parseFloat(lat), parseFloat(lon)];
+      
+      var m = L.circleMarker(p, {
+        radius:4, weight:1.5, interactive:true,
+        color: isSat ? '#c7abec' : '#8fc3ef', 
+        fillColor: isSat ? '#9b6fd1' : '#4c8ddb', 
+        fillOpacity:0.9
+      }).bindTooltip(id);
+      
+      if(isSat) m.addTo(satGroup); else m.addTo(awsGroup);
+      renderedMarkers[id] = m;
+
+      allBounds.push(p);
+      if(allBounds.length > 1) map.fitBounds(allBounds, { padding:[40,40] });
+      else map.setView(p, 6);
+  }
 
   function fmtVal(v){ return v.toFixed(2); }
 
@@ -655,6 +621,11 @@
     var chId = res.id;
     if(!state[chId]){
         initStationRow({id: chId, gate: res.gate});
+    }
+
+    // Dynamic Map Marker
+    if(res.metrics && res.metrics.lat && res.metrics.lon) {
+        addMapMarker(chId, res.metrics.lat, res.metrics.lon, chId.includes("SAT"));
     }
 
     // Two independent SNN gates. Falls back to the legacy single `gate`
