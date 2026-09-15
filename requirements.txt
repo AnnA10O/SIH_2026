@@ -1,0 +1,15 @@
+torch>=2.0.0
+torchvision
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+seaborn
+requests
+h5py
+netCDF4
+xarray
+joblib
+snntorch
+openpyxl
