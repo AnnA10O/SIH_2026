@@ -150,9 +150,21 @@ class InferenceOrchestrator:
             uth_state = self.buffer.get_channel_state(stn_id, 'uth_kalpana')
             is_degraded = uth_state.degraded
 
+            # Neuromorphic SNN Gate Heuristics
+            # Gate A (Fast Temporal): Spikes on sudden rain intensity
+            r_val = self.buffer.get_channel_state(stn_id, 'R').value or 0.0
+            r60_val = self.buffer.get_channel_state(stn_id, 'R_60').value or 0.0
+            gate_a = bool(r_val > 5.0 or r60_val > 15.0 or prob > 0.6)
+
+            # Gate B (Spatial/Synoptic): Spikes on deep convective clouds (UTH / contrast)
+            uth_val = uth_state.value if uth_state.value is not None else 0.0
+            sc_val = data.get('spatial_contrast', 0.0)
+            gate_b = bool(uth_val > 70.0 or sc_val > 5.0 or prob > 0.7)
+
             stn_res = {
                 "id": stn_id,
-                "gate": "a",
+                "gate_a": gate_a,
+                "gate_b": gate_b,
                 "P_CB": float(prob),
                 "tier": tier,
                 "metrics": data,

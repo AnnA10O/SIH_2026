@@ -207,15 +207,76 @@
 
   .src-id{font-family:var(--font-mono); font-size:12.5px; color:var(--text); white-space:nowrap;}
 
-  .gate-tag{
+  .gate-pair{display:flex; gap:6px;}
+
+  .gate-pill{
     display:inline-flex; align-items:center; justify-content:center;
-    width:20px; height:20px;
+    width:26px; height:20px;
     border-radius:6px;
     font-family:var(--font-mono);
     font-size:10.5px; font-weight:600;
+    border:1px solid var(--border-soft);
+    background:var(--bg-map);
+    color:var(--text-dim);
+    transition:color .25s, background .25s, border-color .25s, box-shadow .25s, transform .15s;
+    cursor:help;
   }
-  .gate-tag.a{color:var(--gate-a); background:rgba(76,141,219,0.14);}
-  .gate-tag.b{color:var(--gate-b); background:rgba(155,111,209,0.14);}
+  .gate-pill.fire-a{
+    color:#bcd9f7;
+    background:rgba(76,141,219,0.22);
+    border-color:rgba(76,141,219,0.55);
+    box-shadow:0 0 8px 1px rgba(76,141,219,0.55), 0 0 16px 3px rgba(76,141,219,0.25);
+  }
+  .gate-pill.fire-b{
+    color:#e1d2f6;
+    background:rgba(155,111,209,0.22);
+    border-color:rgba(155,111,209,0.55);
+    box-shadow:0 0 8px 1px rgba(155,111,209,0.55), 0 0 16px 3px rgba(155,111,209,0.25);
+  }
+  .gate-pill.fire-a.flash, .gate-pill.fire-b.flash{ animation:gateflash .5s ease; }
+  @keyframes gateflash{0%{transform:scale(1.18);}100%{transform:scale(1);}}
+
+  /* ---------- accordion rows ---------- */
+  tbody tr.main-row{cursor:pointer; transition:background .15s;}
+  tbody tr.main-row:hover{background:rgba(255,255,255,0.025);}
+
+  .chevron{
+    display:inline-flex; width:14px; height:14px; margin-left:6px;
+    color:var(--text-dim);
+    transition:transform .25s ease, color .25s ease;
+    vertical-align:middle;
+  }
+  tr.main-row.open .chevron{transform:rotate(90deg); color:var(--text-muted);}
+
+  tr.detail-row td{padding:0; border-bottom:1px solid var(--border-soft);}
+  tr.detail-row{border-bottom:none;}
+  .detail-wrap{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  tr.detail-row.open .detail-wrap{max-height:260px;}
+
+  .detail-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px 16px;
+    padding:4px 8px 16px 32px;
+  }
+  .detail-item{
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .detail-label{
+    font-size:10px; text-transform:uppercase; letter-spacing:.03em;
+    color:var(--text-dim);
+  }
+  .detail-value{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--text);
+  }
+
+  @media (max-width:640px){
+    .detail-grid{grid-template-columns:repeat(2, 1fr); padding-left:24px;}
+  }
 
   .history{display:flex; gap:6px; align-items:center; font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
   .chip{
@@ -234,6 +295,14 @@
   .chip.current.spike{color:var(--tier-red); border-color:rgba(221,75,75,0.5); background:rgba(221,75,75,0.08);}
 
   .time-cell{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); white-space:nowrap; text-align:right;}
+
+  thead .th-label{
+    font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--text-dim);
+    text-align:left;
+    padding:0 8px 10px;
+    border-bottom:1px solid var(--border-soft);
+  }
 
   @media (max-width:640px){
     #sidebar{width:176px; padding:12px;}
@@ -291,6 +360,15 @@
   <section id="screen-feed" class="screen">
     <div id="feed-wrap">
       <table id="feed-table">
+        <thead>
+          <tr>
+            <th style="width:24px;"></th>
+            <th class="th-label">Station</th>
+            <th class="th-label" colspan="2">SNN</th>
+            <th class="th-label">CNN Prob</th>
+            <th class="th-label" style="text-align:right;">Time</th>
+          </tr>
+        </thead>
         <tbody id="feed-body"></tbody>
       </table>
     </div>
@@ -431,12 +509,59 @@
     { id:'AS-5', gate:'b' }, { id:'AS-6', gate:'b' }, { id:'AS-7', gate:'b' }
   ];
 
+  // Keys already surfaced in the main row / not useful raw metrics.
+  var DETAIL_SKIP_KEYS = { id:1, gate:1, gate_a:1, gate_b:1, P_CB:1, pinn:1 };
+
+  function prettyLabel(key){
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+  }
+
+  function fmtDetailVal(v){
+    if(v == null) return '\u2014';
+    if(typeof v === 'number') return (v % 1 === 0) ? String(v) : v.toFixed(3);
+    if(typeof v === 'boolean') return v ? 'true' : 'false';
+    return String(v);
+  }
+
+  function renderDetailGrid(chId, res){
+    var grid = document.getElementById('detail-grid-'+chId);
+    if(!grid) return;
+    var html = '';
+    Object.keys(res).forEach(function(key){
+      if(DETAIL_SKIP_KEYS[key]) return;
+      if (key === 'metrics') {
+        Object.keys(res.metrics).forEach(function(mKey){
+          html += '<div class="detail-item"><span class="detail-label">'+prettyLabel(mKey)+'</span>' +
+                  '<span class="detail-value">'+fmtDetailVal(res.metrics[mKey])+'</span></div>';
+        });
+      } else {
+        html += '<div class="detail-item"><span class="detail-label">'+prettyLabel(key)+'</span>' +
+                '<span class="detail-value">'+fmtDetailVal(res[key])+'</span></div>';
+      }
+    });
+    grid.innerHTML = html || '<div class="detail-item"><span class="detail-value">No additional metrics.</span></div>';
+  }
+
+  function toggleRow(chId){
+    var mainRow = document.getElementById('row-'+chId);
+    var detailRow = document.getElementById('detail-row-'+chId);
+    var isOpen = mainRow.classList.toggle('open');
+    detailRow.classList.toggle('open', isOpen);
+  }
+
   function initStationRow(ch){
        var row = document.createElement('tr');
+       row.className = 'main-row';
+       row.id = 'row-'+ch.id;
        row.innerHTML =
          '<td style="width:24px;"><span class="status-dot" id="dot-'+ch.id+'"></span></td>' +
-         '<td class="src-id">'+ch.id+'</td>' +
-         '<td style="width:32px;"><span class="gate-tag '+ch.gate+'">'+ch.gate.toUpperCase()+'</span></td>' +
+         '<td class="src-id">'+ch.id+
+           '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>' +
+         '</td>' +
+         '<td style="width:30px;"><span class="gate-pill" id="gate-a-'+ch.id+'" title="Gate A · Cloudburst (fast temporal)">A</span></td>' +
+         '<td style="width:30px;"><span class="gate-pill" id="gate-b-'+ch.id+'" title="Gate B · Thunderstorm (spatial/synoptic)">B</span></td>' +
          '<td>' +
            '<div class="history">' +
              '<span class="chip" id="prev2-'+ch.id+'">&#8212;</span>' +
@@ -445,7 +570,16 @@
            '</div>' +
          '</td>' +
          '<td class="time-cell" id="time-'+ch.id+'">&#8212;&#8212;:&#8212;&#8212;:&#8212;&#8212;</td>';
+       row.addEventListener('click', function(){ toggleRow(ch.id); });
        feedBody.appendChild(row);
+
+       var detailRow = document.createElement('tr');
+       detailRow.className = 'detail-row';
+       detailRow.id = 'detail-row-'+ch.id;
+       detailRow.innerHTML =
+         '<td colspan="6"><div class="detail-wrap"><div class="detail-grid" id="detail-grid-'+ch.id+'"></div></div></td>';
+       feedBody.appendChild(detailRow);
+
        state[ch.id] = { prev2:null, prev1:null, cur:null };
   }
 
@@ -458,6 +592,30 @@
     if(!state[chId]){
         initStationRow({id: chId, gate: res.gate});
     }
+
+    // Two independent SNN gates. Falls back to the legacy single `gate`
+    // string (e.g. from older API payloads) if gate_a/gate_b aren't present.
+    var gateA = (typeof res.gate_a === 'boolean') ? res.gate_a : (res.gate === 'a');
+    var gateB = (typeof res.gate_b === 'boolean') ? res.gate_b : (res.gate === 'b');
+
+    var pillA = document.getElementById('gate-a-'+chId);
+    var pillB = document.getElementById('gate-b-'+chId);
+    if(pillA){
+      var wasA = pillA.classList.contains('fire-a');
+      pillA.classList.toggle('fire-a', gateA);
+      if(gateA && !wasA){
+        pillA.classList.remove('flash'); void pillA.offsetWidth; pillA.classList.add('flash');
+      }
+    }
+    if(pillB){
+      var wasB = pillB.classList.contains('fire-b');
+      pillB.classList.toggle('fire-b', gateB);
+      if(gateB && !wasB){
+        pillB.classList.remove('flash'); void pillB.offsetWidth; pillB.classList.add('flash');
+      }
+    }
+
+    renderDetailGrid(chId, res);
 
     var s = state[chId];
     var v = res.P_CB;
