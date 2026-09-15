@@ -562,8 +562,28 @@
       .replace(/\b\w/g, function(c){ return c.toUpperCase(); });
   }
 
-  function fmtDetailVal(v){
+  function fmtDetailVal(v, key){
     if(v == null) return '\u2014';
+    
+    if (key === 'tier') {
+        var t = String(v).toLowerCase();
+        var color = 'var(--text)';
+        if(t === 'red') color = 'var(--tier-red)';
+        else if(t === 'orange') color = 'var(--tier-orange)';
+        else if(t === 'yellow') color = 'var(--tier-yellow)';
+        else if(t === 'green') color = 'var(--tier-green)';
+        return '<span style="color:' + color + '; font-weight:700; text-transform:uppercase; text-shadow: 0 0 8px ' + color + ';">' + t + '</span>';
+    }
+    
+    if (key === 'sat_degraded') {
+        var isDegraded = (v === true || v === 'true');
+        if (isDegraded) {
+            return '<span class="chip current spike" style="display:inline-block; margin:0;">DEGRADED</span>';
+        } else {
+            return '<span class="chip current" style="display:inline-block; margin:0;">HEALTHY</span>';
+        }
+    }
+
     if(typeof v === 'number') return (v % 1 === 0) ? String(v) : v.toFixed(3);
     if(typeof v === 'boolean') return v ? 'true' : 'false';
     return String(v);
@@ -578,11 +598,11 @@
       if (key === 'metrics') {
         Object.keys(res.metrics).forEach(function(mKey){
           html += '<div class="detail-item"><span class="detail-label">'+prettyLabel(mKey)+'</span>' +
-                  '<span class="detail-value">'+fmtDetailVal(res.metrics[mKey])+'</span></div>';
+                  '<span class="detail-value">'+fmtDetailVal(res.metrics[mKey], mKey)+'</span></div>';
         });
       } else {
         html += '<div class="detail-item"><span class="detail-label">'+prettyLabel(key)+'</span>' +
-                '<span class="detail-value">'+fmtDetailVal(res[key])+'</span></div>';
+                '<span class="detail-value">'+fmtDetailVal(res[key], key)+'</span></div>';
       }
     });
     grid.innerHTML = html || '<div class="detail-item"><span class="detail-value">No additional metrics.</span></div>';
