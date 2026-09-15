@@ -61,22 +61,63 @@ class InferenceOrchestrator:
         else:
             logging.warning("PINN SWE checkpoint not found. Using untrained weights.")
 
+    def fetch_open_meteo_aws(self):
+        try:
+            logging.info("Attempting Open-Meteo API fallback...")
+            aws_data = {}
+            lats = [str(stn["lat"]) for stn in STATIONS]
+            lons = [str(stn["lng"]) for stn in STATIONS]
+            
+            # Request all 14 stations in a single batched call
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={','.join(lats)}&longitude={','.join(lons)}&current=temperature_2m,precipitation"
+            resp = requests.get(url, timeout=7)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list):
+                    for idx, stn in enumerate(STATIONS):
+                        stn_id = stn["id"]
+                        curr = data[idx].get("current", {})
+                        
+                        # Open-Meteo maps to IMD schema
+                        aws_data[stn_id] = {
+                            "temp": curr.get("temperature_2m", 0.0),
+                            "R": curr.get("precipitation", 0.0),
+                            "R_30": curr.get("precipitation", 0.0) / 2.0,
+                            "R_60": curr.get("precipitation", 0.0)
+                        }
+                return aws_data
+            else:
+                logging.error(f"Open-Meteo API returned status {resp.status_code}")
+                return {}
+        except Exception as e:
+            logging.error(f"Open-Meteo Fallback Failed: {e}")
+            return {}
+
     def fetch_realtime_imd_aws(self):
         try:
             url = "https://api.imd.gov.in/api/v1/aws"
             api_key = os.environ.get("IMD_API_KEY", "")
-            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+            if not api_key:
+                logging.warning("No IMD_API_KEY provided. Skipping IMD API.")
+                return self.fetch_open_meteo_aws()
+
+            headers = {"Authorization": f"Bearer {api_key}"}
             
             resp = requests.get(url, headers=headers, timeout=5)
             
             if resp.status_code == 200:
-                return resp.json()
+                data = resp.json()
+                if not data:
+                    logging.warning("IMD API returned empty dictionary.")
+                    return self.fetch_open_meteo_aws()
+                return data
             else:
                 logging.error(f"AWS API returned status {resp.status_code}")
-                return {}
+                return self.fetch_open_meteo_aws()
         except Exception as e:
             logging.error(f"AWS API Fetch Failed: {e}")
-            return {}
+            return self.fetch_open_meteo_aws()
 
     def predict_nowcast(self):
         aws_data = self.fetch_realtime_imd_aws()
