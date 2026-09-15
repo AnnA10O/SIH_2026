@@ -1,0 +1,67 @@
+# ==============================================================================
+# SIH 2026 — Cloudburst Nowcasting & Flood Warning System (.gitignore)
+# ==============================================================================
+
+# ─── 1. Credentials & Private Tokens (STRICTLY NEVER COMMIT) ──────────────────
+config.json
+mosdac_api/config.json
+*.env
+.env.*
+secrets.json
+*.pem
+*.key
+
+# ─── 2. Python Runtime & Virtual Environments ─────────────────────────────────
+nowcast/
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ─── 3. Large Datasets & Raw Data Archives (>600 MB) ──────────────────────────
+# Ignore all raw and processed sensor/satellite datasets
+data/raw/
+data/processed/
+data/
+*.xlsx
+*.xls
+*.nc
+*.hdf
+*.h5
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Ignore large raw CSV files in root directory
+/*.csv
+AWS_LIST_IN_SITU.pdf
+
+# ─── 4. Preservation of Showcase Outputs ──────────────────────────────────────
+# Explicitly track rich visual outputs, maps, HTML showcases, and summary tables
+!outputs/
+!outputs/**
+
+# ─── 5. Operating System & IDE Metadata ───────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ─── 6. Scratch & Temporary Logs ──────────────────────────────────────────────
+scan_stations.py
+verify_data.py
+*.log
+

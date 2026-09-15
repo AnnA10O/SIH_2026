@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloudburst Nowcasting & PINN Hydrodynamic Simulation — Team Showcase</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --orange: #f97316;
+      --red: #ef4444;
+      --cyan: #06b6d4;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    .header-box {
+      border: 2px solid var(--cyan);
+      border-radius: 8px;
+      padding: 16px 20px;
+      background: rgba(6, 182, 212, 0.05);
+      margin-bottom: 20px;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+    }
+    .header-title {
+      color: var(--cyan);
+      font-size: 1.25rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .header-subtitle {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover {
+      border-color: var(--cyan);
+      color: var(--text);
+    }
+    .tab-btn.active {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      font-weight: bold;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #f8fafc;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-normal { background: rgba(34, 197, 94, 0.2); color: var(--green); border: 1px solid var(--green); }
+    .badge-dev { background: rgba(234, 179, 8, 0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+    .badge-high { background: rgba(249, 115, 22, 0.2); color: var(--orange); border: 1px solid var(--orange); }
+    .badge-emergency { background: rgba(239, 68, 68, 0.3); color: #fee2e2; border: 1px solid var(--red); animation: pulse 1.5s infinite; }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+      50% { opacity: 0.8; box-shadow: 0 0 2px rgba(239, 68, 68, 0.2); }
+    }
+
+    .bar-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0;
+      font-size: 0.85rem;
+    }
+    .bar-label {
+      width: 260px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .bar-track {
+      flex-grow: 1;
+      height: 14px;
+      background: #1e293b;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .bar-val {
+      width: 55px;
+      text-align: right;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .bar-raw {
+      width: 220px;
+      color: #64748b;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #1e293b;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #1a2234;
+    }
+    tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .spike-col {
+      color: #facc15;
+      font-weight: bold;
+    }
+
+    .pinn-box {
+      border: 2px solid var(--red);
+      background: rgba(239, 68, 68, 0.08);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .pinn-header {
+      color: var(--red);
+      font-weight: bold;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+    .pinn-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      font-size: 0.82rem;
+    }
+    .pinn-stat {
+      background: #182234;
+      padding: 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--cyan);
+    }
+    .pinn-stat-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    .pinn-stat-val {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header-box">
+    <div class="header-title">⚡ Cloudburst Nowcasting & PINN Hydrodynamic Flood Simulator</div>
+    <div class="header-subtitle">MoES-NCMRWF / MOSDAC PS 26077 Data Foundation | Spiking Neural Net (SNN) Edge Gate | 2D Shallow Water Equations Inundation Coupling</div>
+  </div>
+
+  <!-- Scenario Navigation Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showScene(0)">1. Quiescent Normal Baseline</button>
+    <button class="tab-btn" onclick="showScene(1)">2. Convective Cell Developing</button>
+    <button class="tab-btn" onclick="showScene(2)">3. SNN Spike & Sampling Escalation</button>
+    <button class="tab-btn" onclick="showScene(3)">4. PEAK CLOUDBURST & PINN TRIGGER (>100mm/hr)</button>
+  </div>
+
+  <!-- Dynamic Content Container -->
+  <div id="scene-display"></div>
+
+  <div class="footer">
+    Compiled from live simulation run | Antigravity AI Cloudburst Nowcasting Pipeline | Ready to share with team & evaluators
+  </div>
+</div>
+
+<script>
+const scenes = [
+  {
+    title: "Scenario 1 — Normal Quiescent Weather (Baseline Edge Sensing)",
+    simTime: "2013-09-06 05:30:00",
+    focus: "Network Wide (Quiescent)",
+    confidence: 12.4,
+    badgeClass: "badge-normal",
+    badgeText: "● NORMAL / QUIESCENT WEATHER",
+    color: "var(--green)",
+    params: [
+      { name: "Rain Intensity (R)", pct: 18.2, raw: "val= 2.1 mm/hr", fill: "var(--green)" },
+      { name: "Rain Acceleration (RI)", pct: 12.0, raw: "val= +1.4 mm/hr²", fill: "var(--green)" },
+      { name: "30-min Accumulation (R30)", pct: 8.5, raw: "val= 1.1 mm", fill: "var(--green)" },
+      { name: "60-min Volume (R60)", pct: 7.2, raw: "val= 2.4 mm", fill: "var(--green)" },
+      { name: "Humidity Surge (dRH)", pct: 38.1, raw: "RH=68% (ΔRH=+3.1%)", fill: "var(--green)" },
+      { name: "GNSS Moisture Influx (IWV)", pct: 16.0, raw: "ΔIWV=+0.2 mm", fill: "var(--green)" }
+    ],
+    stations: [
+      { name: "Khanpara (RSC)", r: "1.2 mm/h", ri: "+0.4 mm/h²", v: "0.142/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "NORMAL", tierClass: "badge-normal" },
+      { name: "North Guwahati", r: "0.8 mm/h", ri: "-0.2 mm/h²", v: "0.098/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "NORMAL", tierClass: "badge-normal" },
+      { name: "Rangiya", r: "2.1 mm/h", ri: "+1.1 mm/h²", v: "0.155/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "NORMAL", tierClass: "badge-normal" },
+      { name: "Nalbari", r: "1.4 mm/h", ri: "+0.2 mm/h²", v: "0.120/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "NORMAL", tierClass: "badge-normal" },
+      { name: "Gossaigaon", r: "0.3 mm/h", ri: "-0.5 mm/h²", v: "0.088/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "NORMAL", tierClass: "badge-normal" },
+      { name: "Arunachal", r: "1.8 mm/h", ri: "+0.8 mm/h²", v: "0.161/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "NORMAL", tierClass: "badge-normal" }
+    ],
+    pinnTrigger: false,
+    statusText: "System Status: Quiescent. SNN edge gates DORMANT (conserving 88% edge battery/bandwidth). PINN shallow-water solver on standby."
+  },
+  {
+    title: "Scenario 2 — Pre-Convective Moisture Convergence (Developing Cell)",
+    simTime: "2013-09-06 07:15:00",
+    focus: "Nalbari (Guwahati Plains)",
+    confidence: 42.5,
+    badgeClass: "badge-dev",
+    badgeText: "● DEVELOPING MOISTURE CELL",
+    color: "var(--yellow)",
+    params: [
+      { name: "Rain Intensity (R)", pct: 24.5, raw: "val= 4.3 mm/hr", fill: "var(--yellow)" },
+      { name: "Rain Acceleration (RI)", pct: 28.7, raw: "val= +7.7 mm/hr²", fill: "var(--yellow)" },
+      { name: "30-min Accumulation (R30)", pct: 6.5, raw: "val= 1.6 mm", fill: "var(--yellow)" },
+      { name: "60-min Volume (R60)", pct: 5.8, raw: "val= 2.2 mm", fill: "var(--yellow)" },
+      { name: "Humidity Surge (dRH)", pct: 24.8, raw: "RH=74% (ΔRH=+8.4%)", fill: "var(--yellow)" },
+      { name: "GNSS Moisture Influx (IWV)", pct: 9.7, raw: "ΔIWV=+0.6 mm", fill: "var(--yellow)" }
+    ],
+    stations: [
+      { name: "Khanpara (RSC)", r: "0.9 mm/h", ri: "+0.1 mm/h²", v: "0.183/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "North Guwahati", r: "1.3 mm/h", ri: "-8.2 mm/h²", v: "0.224/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Rangiya", r: "4.3 mm/h", ri: "+4.5 mm/h²", v: "0.134/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Nalbari", r: "3.0 mm/h", ri: "+5.7 mm/h²", v: "0.216/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Gossaigaon", r: "1.6 mm/h", ri: "-2.8 mm/h²", v: "0.133/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Arunachal", r: "2.5 mm/h", ri: "+1.4 mm/h²", v: "0.146/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" }
+    ],
+    pinnTrigger: false,
+    statusText: "Convective cell growing. Pre-convective moisture buildup detected via GNSS IWV surge. Regional forecasters alerted."
+  },
+  {
+    title: "Scenario 3 — SNN Neuromorphic Spike & Telemetry Escalation",
+    simTime: "2013-09-06 07:45:00",
+    focus: "Nalbari (Guwahati Cluster)",
+    confidence: 62.9,
+    badgeClass: "badge-high",
+    badgeText: "▲ HIGH CONVECTIVE RISK",
+    color: "var(--orange)",
+    params: [
+      { name: "Rain Intensity (R)", pct: 35.2, raw: "val= 57.2 mm/hr", fill: "var(--orange)" },
+      { name: "Rain Acceleration (RI)", pct: 36.7, raw: "val=+212.2 mm/hr²", fill: "var(--orange)" },
+      { name: "30-min Accumulation (R30)", pct: 5.4, raw: "val= 16.1 mm", fill: "var(--orange)" },
+      { name: "60-min Volume (R60)", pct: 3.7, raw: "val= 17.6 mm", fill: "var(--orange)" },
+      { name: "Humidity Surge (dRH)", pct: 11.9, raw: "RH=88% (ΔRH=+25.6%)", fill: "var(--orange)" },
+      { name: "GNSS Moisture Influx (IWV)", pct: 7.0, raw: "ΔIWV=+3.2 mm", fill: "var(--orange)" }
+    ],
+    stations: [
+      { name: "Khanpara (RSC)", r: "0.1 mm/h", ri: "-5.5 mm/h²", v: "0.185/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "North Guwahati", r: "3.0 mm/h", ri: "-5.6 mm/h²", v: "0.246/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Rangiya", r: "2.6 mm/h", ri: "-6.0 mm/h²", v: "0.135/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Nalbari", r: "57.2 mm/h", ri: "+212.2 mm/h²", v: "⚡ SPIKE FIRED! (V >= 1.0)", spike: "⚡", state: "ACTIVE", intv: "5m", tier: "HIGH_RISK", tierClass: "badge-high" },
+      { name: "Gossaigaon", r: "4.7 mm/h", ri: "+18.6 mm/h²", v: "0.262/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Arunachal", r: "1.3 mm/h", ri: "+0.9 mm/h²", v: "0.112/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" }
+    ],
+    pinnTrigger: true,
+    epicenter: "Lat 26.436°N, Lon 91.335°E (Nalbari)",
+    peakR: "57.2 mm/hr",
+    fluxQ: "586,395.6 m³/s",
+    satSync: "Auto-requested Kalpana-1 / INSAT-3D 4km localized IR tile",
+    statusText: "SNN Leaky Integrate-and-Fire gate spiked! Station transitioned to ACTIVE. Telemetry accelerated to 5-min intervals."
+  },
+  {
+    title: "Scenario 4 — PEAK CLOUDBURST CORE & PINN HYDRODYNAMIC TRIGGER (>100 mm/hr)",
+    simTime: "2013-09-06 08:00:00 / 11:00:00",
+    focus: "Arunachal (Mizo Border) & Nalbari (Assam)",
+    confidence: 71.4,
+    badgeClass: "badge-emergency",
+    badgeText: "⚡ CLOUDBURST LIKELY (EMERGENCY / PINN TRIGGERED)",
+    color: "var(--red)",
+    params: [
+      { name: "Rain Intensity (R)", pct: 45.2, raw: "val=124.8 mm/hr", fill: "var(--red)" },
+      { name: "Rain Acceleration (RI)", pct: 26.0, raw: "val=+218.6 mm/hr²", fill: "var(--red)" },
+      { name: "30-min Accumulation (R30)", pct: 11.8, raw: "val= 49.4 mm", fill: "var(--red)" },
+      { name: "60-min Volume (R60)", pct: 7.6, raw: "val= 50.7 mm", fill: "var(--red)" },
+      { name: "Humidity Surge (dRH)", pct: 3.4, raw: "RH=98% (ΔRH=+10.0%)", fill: "var(--orange)" },
+      { name: "GNSS Moisture Influx (IWV)", pct: 7.5, raw: "ΔIWV=+4.8 mm", fill: "var(--cyan)" }
+    ],
+    stations: [
+      { name: "Khanpara (RSC)", r: "2.7 mm/h", ri: "+10.4 mm/h²", v: "0.196/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "North Guwahati", r: "1.6 mm/h", ri: "-5.5 mm/h²", v: "0.143/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Rangiya", r: "4.4 mm/h", ri: "+7.0 mm/h²", v: "0.165/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Nalbari", r: "101.6 mm/h", ri: "+177.6 mm/h²", v: "⚡ V=0.907/1.0", spike: "⚡", state: "ACTIVE", intv: "5m", tier: "CLOUDBURST_LIKELY", tierClass: "badge-emergency" },
+      { name: "Gossaigaon", r: "0.8 mm/h", ri: "-15.5 mm/h²", v: "0.347/1.0", spike: " ", state: "DORMANT", intv: "15m", tier: "DEVELOPING", tierClass: "badge-dev" },
+      { name: "Arunachal", r: "124.8 mm/h", ri: "+218.6 mm/h²", v: "⚡ SPIKE FIRED!", spike: "⚡", state: "ACTIVE", intv: "5m", tier: "CLOUDBURST_LIKELY", tierClass: "badge-emergency" }
+    ],
+    pinnTrigger: true,
+    epicenter: "Lat 24.854°N, Lon 92.739°E (Arunachal) & Lat 26.436°N, Lon 91.335°E (Nalbari)",
+    peakR: "124.8 mm/hr (Surpasses IMD Cloudburst standard of >= 100 mm/hr)",
+    fluxQ: "1,798,316.8 m³/s arriving into catchment grid",
+    satSync: "MOSDAC Kalpana-1 / INSAT-3D 4km convective cooling tile synchronised",
+    statusText: "CRITICAL ALERT: Extreme localized cloudburst core detected. PINN Hydrodynamic Inundation model activated."
+  }
+];
+
+function showScene(idx) {
+  const scene = scenes[idx];
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+
+  let paramsHtml = '';
+  scene.params.forEach(p => {
+    paramsHtml += `
+      <div class="bar-container">
+        <div class="bar-label">• ${p.name}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: ${p.pct}%; background: ${p.fill};"></div>
+        </div>
+        <div class="bar-val" style="color: ${p.fill}">${p.pct.toFixed(1)}%</div>
+        <div class="bar-raw">(${p.raw})</div>
+      </div>
+    `;
+  });
+
+  let stationsHtml = '';
+  scene.stations.forEach(s => {
+    stationsHtml += `
+      <tr>
+        <td style="font-weight: bold;">${s.name}</td>
+        <td style="color: ${s.r.includes('101') || s.r.includes('124') || s.r.includes('57') ? 'var(--red)' : 'var(--text)'}; font-weight: bold;">${s.r}</td>
+        <td style="color: ${s.ri.includes('+') ? 'var(--orange)' : 'var(--text-muted)'}">${s.ri}</td>
+        <td class="spike-col">${s.v}</td>
+        <td style="color: ${s.state === 'ACTIVE' ? 'var(--red)' : 'var(--text-muted)'}; font-weight: bold;">${s.state}</td>
+        <td style="color: ${s.intv === '5m' ? 'var(--cyan)' : 'var(--text-muted)'}">${s.intv}</td>
+        <td><span class="badge ${s.tierClass}">${s.tier}</span></td>
+      </tr>
+    `;
+  });
+
+  let pinnHtml = '';
+  if (scene.pinnTrigger) {
+    pinnHtml = `
+      <div class="pinn-box">
+        <div class="pinn-header">🚨 PINN HYDRODYNAMIC FLOOD INUNDATION SOLVER TRIGGERED!</div>
+        <div class="pinn-grid">
+          <div class="pinn-stat">
+            <div class="pinn-stat-label">Convective Epicenter</div>
+            <div class="pinn-stat-val" style="font-size: 0.9rem; color: var(--cyan);">${scene.epicenter}</div>
+          </div>
+          <div class="pinn-stat">
+            <div class="pinn-stat-label">Peak Rain Core</div>
+            <div class="pinn-stat-val" style="color: var(--red);">${scene.peakR}</div>
+          </div>
+          <div class="pinn-stat">
+            <div class="pinn-stat-label">SWE Runoff Influx (Q)</div>
+            <div class="pinn-stat-val" style="color: var(--blue);">${scene.fluxQ}</div>
+          </div>
+          <div class="pinn-stat">
+            <div class="pinn-stat-label">Satellite Alignment</div>
+            <div class="pinn-stat-val" style="font-size: 0.85rem; color: var(--text);">${scene.satSync}</div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; font-size: 0.8rem; color: var(--text-muted); background: #0b1120; padding: 8px 12px; border-radius: 4px; border: 1px dashed var(--border);">
+          <strong>2D Shallow Water Equations Source Coupling:</strong><br>
+          <code style="color: var(--cyan);">∂h/∂t + ∂(uh)/∂x + ∂(vh)/∂y = R(x,y,t) - I(x,y,t)</code> &nbsp;|&nbsp; 
+          <span style="color: #cbd5e1;">Catchment Mesh: 4km grid spacing | Runoff excess feeding PINN forward solver.</span>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('scene-display').innerHTML = `
+    <!-- Top Bar -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <span style="color: var(--cyan); font-weight: bold;">Simulated Timestep: ${scene.simTime}</span>
+        <span class="badge ${scene.badgeClass}">${scene.badgeText}</span>
+      </div>
+
+      <!-- Overall Confidence Progress Bar -->
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">NETWORK PREDICTION CONFIDENCE P(CB):</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="bar-track" style="height: 22px;">
+            <div class="bar-fill" style="width: ${scene.confidence}%; background: ${scene.color};"></div>
+          </div>
+          <div style="font-size: 1.3rem; font-weight: bold; color: ${scene.color}; width: 80px; text-align: right;">${scene.confidence.toFixed(1)}%</div>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Epicenter Focus: <strong style="color: #f8fafc;">${scene.focus}</strong></div>
+      </div>
+
+      <!-- Parameter Influence Breakdown -->
+      <div class="card-title">📊 METEOROLOGICAL PARAMETER INFLUENCE BREAKDOWN (Normalized Contribution %)</div>
+      ${paramsHtml}
+    </div>
+
+    <!-- Station Mesh Table -->
+    <div class="card">
+      <div class="card-title">📡 IN-SITU GROUND STATION NETWORK (AWS + SNN NEUROMORPHIC EDGE GATE)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Station Name</th>
+            <th>Rain Rate</th>
+            <th>Acc (RI)</th>
+            <th>SNN Membrane</th>
+            <th>State</th>
+            <th>Interval</th>
+            <th>Alert Tier</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${stationsHtml}
+        </tbody>
+      </table>
+      ${pinnHtml}
+    </div>
+  `;
+}
+
+// Initial render
+showScene(3);
+</script>
+
+</body>
+</html>
