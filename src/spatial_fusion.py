@@ -1,8 +1,8 @@
 """Module 5 — Spatial Fusion Grid Engine.
 
 Solves the AWS inter-station gap problem:
-  - Cloudburst convective cores are 4.5–5.5 km across.
-  - AWS station spacing is typically 15–50 km.
+  - Cloudburst convective cores are 4.5 - 5.5 km across.
+  - AWS station spacing is typically 15 - 50 km.
   - A cloudburst can develop and drop 100mm between gauges.
 
 Architecture:
@@ -103,24 +103,51 @@ class SpatialFusionGrid:
         fused = ((1.0 - self.alpha_sat) * station_grid) + (self.alpha_sat * sat_norm)
         return np.clip(fused, 0.0, 1.0)
 
+    def load_satellite_h5(
+        self,
+        h5_path: str,
+        variable: str = "QPE",
+        max_rate_mm_hr: float = 50.0
+    ) -> np.ndarray:
+        """
+        Load real MOSDAC Kalpana-1 / INSAT-3D HDF5 file and interpolate directly
+        onto this SpatialFusionGrid's 2D coordinate mesh.
+        
+        Returns:
+            Normalized 2D array [0, 1] matching self.shape
+        """
+        from src.satellite_reader import SatelliteReader
+        bbox = (self.lat_min, self.lat_max, self.lon_min, self.lon_max)
+        
+        try:
+            res = SatelliteReader.read_qpe(h5_path, bbox=bbox)
+            lats, lons, qpe = res["lats"], res["lons"], res["qpe"]
+            if len(qpe) == 0:
+                return np.zeros(self.shape, dtype=np.float32)
+
+            # Interpolate onto 2D regular grid
+            interp_grid = SatelliteReader.interpolate_to_grid(
+                lats, lons, qpe, self.lat_grid, self.lon_grid, method="nearest"
+            )
+            # Normalize to [0, 1] as convective rainfall proxy
+            norm_sat = np.clip(interp_grid / max_rate_mm_hr, 0.0, 1.0)
+            return norm_sat.astype(np.float32)
+        except Exception as e:
+            # Fallback to zeros if file parsing fails
+            return np.zeros(self.shape, dtype=np.float32)
+
     def generate_risk_map(
         self,
         station_predictions: List[Dict],
-        satellite_grid: Optional[np.ndarray] = None
+        satellite_grid: Optional[np.ndarray] = None,
+        satellite_h5_path: Optional[str] = None
     ) -> Dict:
         """
         End-to-end regional risk map generation.
-
-        Returns
-        -------
-        Dict with:
-          - risk_matrix (2D numpy array)
-          - lats, lons (1D coordinate arrays)
-          - peak_risk (float)
-          - peak_centroid (lat, lon)
-          - high_risk_cells (count of cells with risk >= 0.60)
-          - alert_level (NORMAL | DEVELOPING | HIGH_RISK | CLOUDBURST_LIKELY)
+        Accepts pre-computed satellite_grid OR path to real satellite HDF5 file.
         """
+        if satellite_grid is None and satellite_h5_path is not None:
+            satellite_grid = self.load_satellite_h5(satellite_h5_path)
         stn_grid = self.interpolate_station_scores(station_predictions)
         final_risk = self.fuse_with_satellite(stn_grid, satellite_grid)
 

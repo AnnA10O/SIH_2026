@@ -74,10 +74,31 @@ def load_config():
 
 config_file = load_config()
 
-# Fetching Information from 'config.json'
-user_creds = config_file['user_credentials']
-username = user_creds.get("username/email", "")
-password = user_creds.get("password", "")
+# Fetching Information from 'config.json' with environment variable override
+for env_candidate in [Path(__file__).resolve().parent.parent / ".env", Path(".env"), Path(__file__).resolve().parent / ".env"]:
+    if env_candidate.exists():
+        try:
+            with open(env_candidate, "r", encoding="utf-8") as ef:
+                for line in ef:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip())
+        except Exception:
+            pass
+
+user_creds = config_file.get('user_credentials', {})
+cfg_user = user_creds.get("username/email") or user_creds.get("username", "")
+cfg_pass = user_creds.get("password", "")
+
+# Don't use placeholder values like ${MOSDAC_USER}
+if cfg_user.startswith("${") and cfg_user.endswith("}"):
+    cfg_user = ""
+if cfg_pass.startswith("${") and cfg_pass.endswith("}"):
+    cfg_pass = ""
+
+username = os.environ.get("MOSDAC_USER") or cfg_user
+password = os.environ.get("MOSDAC_PASS") or cfg_pass
 
 download_settings = config_file['download_settings']
 

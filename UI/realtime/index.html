@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Nowcast</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1220;
+    --bg-map:#0d1526;
+    --panel:rgba(15,23,41,0.86);
+    --border:#223049;
+    --border-soft:#1a2438;
+    --text:#dce3f0;
+    --text-muted:#64738c;
+    --text-dim:#3e4a64;
+    --tier-green:#3fae72;
+    --tier-yellow:#d9ae3c;
+    --tier-orange:#db7f35;
+    --tier-red:#dd4b4b;
+    --gate-a:#4c8ddb;
+    --gate-b:#9b6fd1;
+    --radius:10px;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Roboto Mono", "Cascadia Code", Menlo, monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:var(--font-ui);
+    background:var(--bg);
+    color:var(--text);
+    overflow:hidden;
+  }
+
+  button, input{font-family:inherit;}
+  button:focus-visible, input:focus-visible{
+    outline:2px solid var(--gate-a);
+    outline-offset:2px;
+  }
+
+  /* ---------- nav toggle ---------- */
+  #nav-toggle{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:1200;
+    display:flex;
+    gap:2px;
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:4px;
+  }
+  .tab{
+    width:36px;height:36px;
+    border-radius:999px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text-muted);
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    transition:color .2s, background .2s;
+  }
+  .tab svg{width:18px;height:18px;}
+  .tab.active{color:var(--bg); background:var(--text);}
+  .tab:hover:not(.active){color:var(--text);}
+
+  /* ---------- screens ---------- */
+  .screen{position:fixed; inset:0; display:none;}
+  .screen.active{display:block;}
+
+  /* ---------- screen 1: map ---------- */
+  #screen-map #map{position:absolute; inset:0; background:var(--bg-map);}
+
+  #sidebar{
+    position:absolute;
+    top:16px; left:16px;
+    z-index:900;
+    width:212px;
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .filter-group{margin-bottom:16px;}
+  .filter-group:last-child{margin-bottom:0;}
+  .filter-label{
+    font-size:11.5px;
+    color:var(--text-muted);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .segmented{
+    display:flex;
+    background:var(--bg-map);
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    padding:3px;
+    gap:2px;
+  }
+  .seg{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--text-muted);
+    font-size:12px;
+    padding:6px 0;
+    border-radius:6px;
+    cursor:pointer;
+    transition:background .2s, color .2s;
+  }
+  .seg.active{background:var(--border); color:var(--text);}
+  .seg:hover:not(.active){color:var(--text);}
+
+  .switch-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:7px 0;
+    font-size:13px;
+    color:var(--text);
+  }
+  .switch{position:relative; width:34px; height:20px; display:inline-block; flex-shrink:0;}
+  .switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
+  .slider{
+    position:absolute; inset:0;
+    background:var(--border-soft);
+    border-radius:999px;
+    transition:background .2s;
+    pointer-events:none;
+  }
+  .slider::before{
+    content:"";
+    position:absolute;
+    width:14px;height:14px;
+    left:3px; top:3px;
+    background:var(--text-muted);
+    border-radius:50%;
+    transition:transform .2s, background .2s;
+  }
+  .switch input:checked + .slider{background:rgba(76,141,219,0.32);}
+  .switch input:checked + .slider::before{transform:translateX(14px); background:var(--gate-a);}
+
+  #live-clock{
+    position:absolute;
+    bottom:16px; left:16px;
+    z-index:900;
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    color:var(--text-muted);
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    padding:7px 11px;
+    border-radius:999px;
+    border:1px solid var(--border);
+  }
+  #live-clock .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--tier-green);
+    animation:dotpulse 2s ease-in-out infinite;
+  }
+  @keyframes dotpulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  .zone-path{
+    transition:fill 700ms ease, fill-opacity 700ms ease, stroke 700ms ease;
+  }
+  .zone-critical{animation:critical-pulse 1.6s ease-in-out infinite;}
+  @keyframes critical-pulse{
+    0%,100%{filter:drop-shadow(0 0 2px var(--tier-red));}
+    50%{filter:drop-shadow(0 0 9px var(--tier-red));}
+  }
+
+  /* ---------- screen 2: feed ---------- */
+  #screen-feed{background:var(--bg); overflow-y:auto;}
+  #feed-wrap{max-width:720px; margin:0 auto; padding:76px 20px 40px;}
+
+  table#feed-table{width:100%; border-collapse:collapse;}
+  tbody tr{border-bottom:1px solid var(--border-soft);}
+  tbody tr:first-child{border-top:1px solid var(--border-soft);}
+  tbody td{padding:13px 8px; vertical-align:middle;}
+
+  .status-dot{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--text-dim);
+    transition:background .3s, box-shadow .3s;
+  }
+  .status-dot.flagged{
+    background:var(--tier-red);
+    animation:dotflag 1s ease-in-out infinite;
+  }
+  @keyframes dotflag{
+    0%,100%{box-shadow:0 0 6px 1px rgba(221,75,75,.55);}
+    50%{box-shadow:0 0 14px 4px rgba(221,75,75,.9);}
+  }
+
+  .src-id{font-family:var(--font-mono); font-size:12.5px; color:var(--text); white-space:nowrap;}
+
+  .gate-tag{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:20px; height:20px;
+    border-radius:6px;
+    font-family:var(--font-mono);
+    font-size:10.5px; font-weight:600;
+  }
+  .gate-tag.a{color:var(--gate-a); background:rgba(76,141,219,0.14);}
+  .gate-tag.b{color:var(--gate-b); background:rgba(155,111,209,0.14);}
+
+  .history{display:flex; gap:6px; align-items:center; font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  .chip{
+    font-size:12.5px;
+    padding:3px 7px;
+    border-radius:6px;
+    background:var(--bg-map);
+    color:var(--text-dim);
+    border:1px solid var(--border-soft);
+    min-width:42px;
+    text-align:center;
+  }
+  .chip.current{color:var(--text); border-color:var(--border);}
+  .chip.current.flash{animation:chipflash .5s ease;}
+  @keyframes chipflash{0%{background:rgba(255,255,255,0.16);}100%{background:var(--bg-map);}}
+  .chip.current.spike{color:var(--tier-red); border-color:rgba(221,75,75,0.5); background:rgba(221,75,75,0.08);}
+
+  .time-cell{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); white-space:nowrap; text-align:right;}
+
+  @media (max-width:640px){
+    #sidebar{width:176px; padding:12px;}
+    .filter-label{font-size:11px;}
+    #feed-wrap{padding:68px 12px 32px;}
+    .chip{min-width:36px; font-size:11.5px; padding:3px 5px;}
+    .src-id{font-size:11.5px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .zone-critical, .status-dot.flagged, #live-clock .dot, .chip.current.flash{animation:none !important;}
+    .zone-path{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+  <div id="nav-toggle">
+    <button id="tab-map" class="tab active" aria-label="Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+    </button>
+    <button id="tab-feed" class="tab" aria-label="Feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,13 7,13 9,7 13,19 16,13 22,13"/></svg>
+    </button>
+  </div>
+
+  <section id="screen-map" class="screen active">
+    <div id="map"></div>
+
+    <aside id="sidebar">
+      <div class="filter-group">
+        <div class="filter-label">Basemap</div>
+        <div class="segmented">
+          <button class="seg active" data-base="street">Street</button>
+          <button class="seg" data-base="satellite">Satellite</button>
+          <button class="seg" data-base="terrain">Terrain</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Stations</div>
+        <label class="switch-row">
+          <span>AWS</span>
+          <span class="switch"><input type="checkbox" id="toggle-aws" checked><span class="slider"></span></span>
+        </label>
+        <label class="switch-row">
+          <span>Satellite</span>
+          <span class="switch"><input type="checkbox" id="toggle-sat" checked><span class="slider"></span></span>
+        </label>
+      </div>
+    </aside>
+
+    <div id="live-clock"><span class="dot"></span><span id="clock-text">--:--:--</span></div>
+  </section>
+
+  <section id="screen-feed" class="screen">
+    <div id="feed-wrap">
+      <table id="feed-table">
+        <tbody id="feed-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+<script>
+(function(){
+
+  /* ================= nav toggle ================= */
+  var tabMap = document.getElementById('tab-map');
+  var tabFeed = document.getElementById('tab-feed');
+  var screenMap = document.getElementById('screen-map');
+  var screenFeed = document.getElementById('screen-feed');
+
+  function showScreen(name){
+    if(name === 'map'){
+      screenMap.classList.add('active');
+      screenFeed.classList.remove('active');
+      tabMap.classList.add('active');
+      tabFeed.classList.remove('active');
+      requestAnimationFrame(function(){ map.invalidateSize(); });
+    } else {
+      screenFeed.classList.add('active');
+      screenMap.classList.remove('active');
+      tabFeed.classList.add('active');
+      tabMap.classList.remove('active');
+    }
+  }
+  tabMap.addEventListener('click', function(){ showScreen('map'); });
+  tabFeed.addEventListener('click', function(){ showScreen('feed'); });
+
+  /* ================= map init ================= */
+  var map = L.map('map', { zoomControl:false, attributionControl:true }).setView([28.5,86],5);
+  L.control.zoom({ position:'bottomright' }).addTo(map);
+
+  var basemaps = {
+    street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom:18, attribution:'&copy; OpenStreetMap contributors'
+    }),
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom:18, attribution:'Tiles &copy; Esri'
+    }),
+    terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom:17, attribution:'Map data: &copy; OpenStreetMap contributors, SRTM | Style: &copy; OpenTopoMap (CC-BY-SA)'
+    })
+  };
+  basemaps.street.addTo(map);
+
+  document.querySelectorAll('.seg').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.seg').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      Object.keys(basemaps).forEach(function(k){ map.removeLayer(basemaps[k]); });
+      basemaps[btn.dataset.base].addTo(map);
+    });
+  });
+
+  /* ================= zones ================= */
+  var zonesData = [
+    { id:'UK-1', lat:30.7346, lng:79.0669, hw:0.055 },
+    { id:'UK-2', lat:30.2844, lng:78.9811, hw:0.065 },
+    { id:'UK-3', lat:30.6963, lng:79.0227, hw:0.045 },
+    { id:'UK-4', lat:30.6377, lng:79.0417, hw:0.045 },
+    { id:'UK-5', lat:30.5326, lng:79.0795, hw:0.055 },
+    { id:'UK-6', lat:30.4000, lng:79.3200, hw:0.075 },
+    { id:'UK-7', lat:30.5620, lng:79.5641, hw:0.065 },
+    { id:'AS-1', lat:26.1445, lng:91.7362, hw:0.11 },
+    { id:'AS-2', lat:26.6528, lng:92.7926, hw:0.11 },
+    { id:'AS-3', lat:26.7509, lng:94.2037, hw:0.11 },
+    { id:'AS-4', lat:27.4728, lng:94.9120, hw:0.11 },
+    { id:'AS-5', lat:27.2360, lng:94.1050, hw:0.09 },
+    { id:'AS-6', lat:26.9500, lng:94.1700, hw:0.09 },
+    { id:'AS-7', lat:27.4833, lng:94.5833, hw:0.09 }
+  ];
+
+  function boxBounds(lat,lng,hw){ return [[lat-hw,lng-hw],[lat+hw,lng+hw]]; }
+
+  var allBounds = [];
+  zonesData.forEach(function(z){
+    var b = boxBounds(z.lat, z.lng, z.hw);
+    allBounds.push(b[0], b[1]);
+  });
+  map.fitBounds(allBounds, { padding:[40,40] });
+
+
+
+  /* ================= stations ================= */
+  var awsGroup = L.layerGroup().addTo(map);
+  var satGroup = L.layerGroup().addTo(map);
+
+  var awsStations = [
+    [30.742,79.075],[30.291,78.965],[30.703,79.030],[30.630,79.050],
+    [30.540,79.088],[30.408,79.335],[30.555,79.552],
+    [26.150,91.750],[26.660,92.805],[26.742,94.190],[27.480,94.900],
+    [27.228,94.112],[26.958,94.165],[27.490,94.575]
+  ];
+  var satStations = [
+    [30.80,79.15],[30.35,79.00],[30.60,79.45],
+    [26.30,91.90],[26.85,92.60],[27.05,94.35],[27.55,94.75],[26.60,94.00]
+  ];
+
+  awsStations.forEach(function(p){
+    L.circleMarker(p, {
+      radius:4, weight:1.5, interactive:false,
+      color:'#8fc3ef', fillColor:'#4c8ddb', fillOpacity:0.9
+    }).addTo(awsGroup);
+  });
+  satStations.forEach(function(p){
+    L.circleMarker(p, {
+      radius:4, weight:1.5, interactive:false,
+      color:'#c7abec', fillColor:'#9b6fd1', fillOpacity:0.9
+    }).addTo(satGroup);
+  });
+
+  document.getElementById('toggle-aws').addEventListener('change', function(e){
+    if(e.target.checked) awsGroup.addTo(map); else map.removeLayer(awsGroup);
+  });
+  document.getElementById('toggle-sat').addEventListener('change', function(e){
+    if(e.target.checked) satGroup.addTo(map); else map.removeLayer(satGroup);
+  });
+
+  /* ================= live clock ================= */
+  function tickClock(){
+    document.getElementById('clock-text').textContent =
+      new Date().toLocaleTimeString('en-GB', { hour12:false });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  /* ================= feed screen ================= */
+  var feedBody = document.getElementById('feed-body');
+  var state = {};
+  
+  var ALL_STATIONS = [
+    { id:'UK-1', gate:'a' }, { id:'UK-2', gate:'a' }, { id:'UK-3', gate:'a' }, { id:'UK-4', gate:'a' },
+    { id:'UK-5', gate:'b' }, { id:'UK-6', gate:'b' }, { id:'UK-7', gate:'b' },
+    { id:'AS-1', gate:'a' }, { id:'AS-2', gate:'a' }, { id:'AS-3', gate:'a' }, { id:'AS-4', gate:'a' },
+    { id:'AS-5', gate:'b' }, { id:'AS-6', gate:'b' }, { id:'AS-7', gate:'b' }
+  ];
+
+  function initStationRow(ch){
+       var row = document.createElement('tr');
+       row.innerHTML =
+         '<td style="width:24px;"><span class="status-dot" id="dot-'+ch.id+'"></span></td>' +
+         '<td class="src-id">'+ch.id+'</td>' +
+         '<td style="width:32px;"><span class="gate-tag '+ch.gate+'">'+ch.gate.toUpperCase()+'</span></td>' +
+         '<td>' +
+           '<div class="history">' +
+             '<span class="chip" id="prev2-'+ch.id+'">&#8212;</span>' +
+             '<span class="chip" id="prev1-'+ch.id+'">&#8212;</span>' +
+             '<span class="chip current" id="cur-'+ch.id+'">Loading...</span>' +
+           '</div>' +
+         '</td>' +
+         '<td class="time-cell" id="time-'+ch.id+'">&#8212;&#8212;:&#8212;&#8212;:&#8212;&#8212;</td>';
+       feedBody.appendChild(row);
+       state[ch.id] = { prev2:null, prev1:null, cur:null };
+  }
+
+  ALL_STATIONS.forEach(initStationRow);
+
+  function fmtVal(v){ return v.toFixed(2); }
+
+  function updateStationFeed(res){
+    var chId = res.id;
+    if(!state[chId]){
+        initStationRow({id: chId, gate: res.gate});
+    }
+
+    var s = state[chId];
+    var v = res.P_CB;
+    if(s.cur !== v) {
+        s.prev2 = s.prev1;
+        s.prev1 = s.cur;
+        s.cur = v;
+
+        document.getElementById('prev2-'+chId).textContent = s.prev2 != null ? fmtVal(s.prev2) : '\u2014';
+        document.getElementById('prev1-'+chId).textContent = s.prev1 != null ? fmtVal(s.prev1) : '\u2014';
+
+        var curEl = document.getElementById('cur-'+chId);
+        curEl.textContent = fmtVal(s.cur);
+
+        var flagged = v >= 0.85; // red tier
+        curEl.classList.toggle('spike', flagged);
+        curEl.classList.remove('flash');
+        void curEl.offsetWidth;
+        curEl.classList.add('flash');
+
+        document.getElementById('time-'+chId).textContent = new Date().toLocaleTimeString('en-GB', { hour12:false });
+
+        var dot = document.getElementById('dot-'+chId);
+        if(flagged){
+          dot.classList.add('flagged');
+          clearTimeout(dot._t);
+          dot._t = setTimeout(function(){ dot.classList.remove('flagged'); }, 4200);
+        }
+    }
+  }
+
+  function fetchLiveNowcast(){
+      fetch('/api/nowcast')
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(res => {
+                updateStationFeed(res);
+            });
+        })
+        .catch(err => console.error("Error fetching nowcast:", err));
+  }
+
+  fetchLiveNowcast();
+  setInterval(fetchLiveNowcast, 5000);
+
+})();
+</script>
+</body>
+</html>

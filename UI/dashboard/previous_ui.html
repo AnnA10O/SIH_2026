@@ -1,0 +1,2274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KERAUNOS | AI Hyper-Local Early Warning System &middot; MoES PS 26077</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("keraunos-theme");
+        if (t === "light") {
+          document.documentElement.classList.add("light-mode");
+          document.addEventListener("DOMContentLoaded", function() {
+            if (document.body) document.body.classList.add("light-mode");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; width: 100%; overflow: hidden; font-family: 'Inter', -apple-system, sans-serif; background: #060b14; color: #e2eaf4; }
+    :root {
+      --bg-main: #060b14;
+      --bg-panel: rgba(10, 18, 32, 0.95);
+      --bg-card: rgba(15, 27, 48, 0.7);
+      --bg-card-hover: rgba(22, 38, 66, 0.85);
+      --border: rgba(99, 179, 237, 0.14);
+      --border-mid: rgba(99, 179, 237, 0.28);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #52677e;
+      --text-accent: #38bdf8;
+      --cyan: #06b6d4;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --orange: #f97316;
+      --red: #ef4444;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── TOPBAR ─────────────────────────────────────────────────── */
+    #topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 54px;
+      background: rgba(6, 11, 20, 0.97); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 14px; gap: 10px; z-index: 2000;
+      overflow-x: auto; overflow-y: hidden;
+    }
+    #topbar::-webkit-scrollbar { display: none; }
+    .brand-title {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: 0.06em;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    .brand-tag { font-size: 10px; color: var(--text-muted); font-weight: 500; line-height: 1.2; }
+    
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.35); color: var(--green);
+      transition: var(--transition);
+    }
+    .status-badge.watch { background: rgba(234, 179, 8, 0.12); border-color: rgba(234, 179, 8, 0.4); color: var(--yellow); }
+    .status-badge.warning { background: rgba(249, 115, 22, 0.14); border-color: rgba(249, 115, 22, 0.45); color: var(--orange); }
+    .status-badge.danger { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.55); color: var(--red); animation: pulseAlert 1.2s ease infinite; }
+    @keyframes pulseAlert { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
+
+    .status-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    .topbar-spacer { flex: 1; }
+
+    .station-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 10px; font-size: 11px;
+    }
+    .station-chip .lbl { color: var(--text-muted); }
+    .station-chip .val { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--text-accent); }
+
+    .layer-selector {
+      display: flex; align-items: center; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); border-radius: 6px; padding: 2px;
+    }
+    .layer-btn {
+      background: transparent; border: none; color: var(--text-secondary);
+      font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 4px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .layer-btn.active { background: rgba(56, 189, 248, 0.2); color: var(--text-accent); }
+    .layer-btn:hover:not(.active) { color: var(--text-primary); }
+
+    #system-clock { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+    .btn-tech {
+      background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.35);
+      color: #c084fc; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 6px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .btn-tech:hover { background: rgba(168, 85, 247, 0.22); }
+
+    /* ── WORKSPACE SHELL ─────────────────────────────────────────── */
+    #workspace {
+      position: fixed; top: 50px; left: 0; right: 0; bottom: 0;
+      display: grid; grid-template-columns: 310px 1fr 380px;
+      overflow: hidden; background: var(--bg-main);
+    }
+
+    /* 3-Column Command Center Shelves */
+    .hud-col {
+      background: var(--bg-panel); display: flex; flex-direction: column;
+      height: 100%; overflow-y: auto; overflow-x: hidden;
+    }
+    .hud-col::-webkit-scrollbar { width: 3px; }
+    .hud-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+    .hud-col.left { border-right: 1px solid var(--border); }
+    .hud-col.right { border-left: 1px solid var(--border); }
+
+    .hud-center {
+      display: flex; flex-direction: column; height: 100%; min-width: 0;
+      overflow: hidden; position: relative;
+    }
+
+    /* Compact Panel Blocks for High-Density Visibility (NO SCROLL) */
+    .panel-block { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    .block-label {
+      font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Side-by-Side PINN Dock */
+    #pinn-section {
+      height: 230px; background: rgba(6, 12, 24, 0.98);
+      border-top: 1px solid var(--border); display: flex; flex-direction: column;
+      position: relative; z-index: 600; flex-shrink: 0;
+    }
+    .pinn-dock-split {
+      flex: 1; width: 100%; height: calc(100% - 34px);
+      display: grid; grid-template-columns: 54% 46%; min-height: 0;
+    }
+    .flood-canvas-wrap {
+      position: relative; width: 100%; height: 100%;
+      background: #060e1e; overflow: hidden; border-right: 1px solid var(--border);
+    }
+    #flood-canvas { width: 100%; height: 100%; display: block; }
+    .pinn-how-container {
+      width: 100%; height: 100%; background: #060e1e;
+      overflow-y: auto; padding: 7px 10px; display: flex; flex-direction: column; gap: 5px;
+    }
+    .pinn-pde-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .pde-card {
+      background: rgba(6, 12, 24, 0.75); border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px; padding: 5px 8px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .pde-eq {
+      font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: #38bdf8;
+      background: rgba(255, 255, 255, 0.035); padding: 2px 5px; border-radius: 4px;
+      margin: 1px 0; border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .pde-body { font-size: 8.5px; color: var(--text-secondary); line-height: 1.3; }
+
+    /* Compact Telemetry Gauges */
+    .telemetry-monitor-container { display: flex; flex-direction: column; gap: 6px; }
+    .gauge-card {
+      background: rgba(6, 12, 24, 0.7); border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px; padding: 5px 8px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .gauge-title { font-size: 10px; font-weight: 600; }
+    .gauge-val { font-size: 11.5px; }
+    .gauge-track { height: 5px; margin-top: 1px; }
+
+    /* Compact Ranking Board */
+    .ranking-board-container { display: flex; flex-direction: column; gap: 4px; max-height: 220px; }
+    .ranking-item { padding: 5px 7px; gap: 3px; border-radius: 5px; }
+    .ranking-loc-name { font-size: 10px; }
+    .ranking-meta-grid { gap: 2px; font-size: 8.5px; }
+
+    /* Compact Model Cards */
+    .model-board-list { display: flex; flex-direction: column; gap: 5px; }
+    .model-card { padding: 6px 8px; gap: 3px; border-radius: 6px; }
+    .model-title { font-size: 10px; }
+    .model-card-body { gap: 2px; font-size: 8.5px; padding-left: 14px; }
+    .model-handoff-box { padding: 3px 6px; font-size: 8px; }
+
+    /* Compact XAI Card */
+    .xai-summary-box { padding: 7px 9px; }
+    .xai-headline { font-size: 10.5px; margin-bottom: 2px; }
+    .xai-narrative { font-size: 9.5px; line-height: 1.35; }
+    .xai-item { padding: 4px 6px; gap: 6px; }
+    .xai-item-title { font-size: 9.5px; }
+    .xai-item-desc { font-size: 8.5px; }
+    .xai-waterfall-box { padding: 6px 8px; gap: 4px; }
+    .wf-row { font-size: 8.5px; gap: 6px; }
+    .wf-lbl { width: 95px; font-size: 8.5px; }
+
+
+    /* ── LEFT PANEL: MAP ──────────────────────────────────────────── */
+    #map-container {
+      display: flex; flex-direction: column; position: relative;
+      border-right: 1px solid var(--border); min-width: 0;
+    }
+    #map-view { flex: 1; width: 100%; position: relative; }
+    #station-map { width: 100%; height: 100%; }
+
+    /* Filter Bar over Map */
+    .map-filter-bar {
+      position: absolute; top: 12px; left: 12px; z-index: 500;
+      display: flex; gap: 6px; flex-wrap: wrap; pointer-events: auto;
+    }
+    .filter-chip {
+      background: rgba(6, 11, 20, 0.88); backdrop-filter: blur(12px);
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 4px 10px; font-size: 10px; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; transition: var(--transition);
+    }
+    .filter-chip:hover { color: var(--text-primary); border-color: var(--border-mid); }
+    .filter-chip.active { background: rgba(6, 182, 212, 0.18); border-color: rgba(6, 182, 212, 0.5); color: #67e8f9; }
+
+    /* Legend Overlay on Map */
+    .map-legend {
+      position: absolute; bottom: 12px; right: 12px; z-index: 500;
+      background: rgba(6, 11, 20, 0.9); backdrop-filter: blur(14px);
+      border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+      font-size: 10px; display: flex; flex-direction: column; gap: 4px; pointer-events: none;
+    }
+    .legend-title { font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-poly { width: 14px; height: 6px; border: 1px dashed var(--red); background: rgba(239,68,68,0.3); border-radius: 2px; }
+
+    /* ── PINN 2D Valley Hydrodynamic Section ── */
+    #pinn-section {
+      height: 225px; background: rgba(6, 12, 24, 0.98);
+      border-top: 1px solid var(--border); display: flex; flex-direction: column;
+      position: relative; z-index: 600; flex-shrink: 0;
+    }
+    .pinn-header {
+      height: 38px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 8px; gap: 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      overflow-x: auto; overflow-y: hidden;
+    }
+    .pinn-header::-webkit-scrollbar { display: none; }
+    .pinn-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--cyan); white-space: nowrap; flex-shrink: 0;
+    }
+    .pinn-eq { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-muted); background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+    .pinn-metrics-bar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .pinn-kpi { font-size: 9.5px; color: var(--text-secondary); white-space: nowrap; }
+    .pinn-kpi b { font-family: 'JetBrains Mono', monospace; color: var(--text-primary); }
+    .pinn-kpi.danger b { color: var(--red); }
+    .pinn-action-buttons { display: flex; gap: 4px; flex-shrink: 0; }
+    .pinn-ctrl-btn {
+      background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #67e8f9; font-size: 9.5px; font-weight: 600; padding: 3px 7px; border-radius: 4px;
+      cursor: pointer; transition: var(--transition); white-space: nowrap;
+    }
+    .pinn-ctrl-btn:hover { background: rgba(6, 182, 212, 0.28); }
+    .pinn-ctrl-btn.secondary { background: rgba(255, 255, 255, 0.04); border-color: var(--border); color: var(--text-secondary); }
+    .flood-canvas-wrap { flex: 1; position: relative; width: 100%; height: calc(100% - 38px); background: #060e1e; overflow: hidden; }
+    #flood-canvas { width: 100%; height: 100%; display: block; }
+
+    /* ── XAI Physical Reasoning & Attribution ── */
+    .xai-status-chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px; background: rgba(74, 222, 128, 0.12);
+      border: 1px solid rgba(74, 222, 128, 0.3); color: var(--green);
+    }
+    .xai-status-chip.warning { background: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.45); color: var(--orange); }
+    .xai-status-chip.severe { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.55); color: var(--red); animation: pulseAlert 1.2s infinite; }
+
+    .xai-card { display: flex; flex-direction: column; gap: 8px; }
+    .xai-summary-box {
+      background: rgba(6, 12, 22, 0.75); border: 1px solid rgba(99, 179, 237, 0.16);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .xai-headline { font-size: 11.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .xai-narrative { font-size: 10.5px; color: var(--text-secondary); line-height: 1.45; }
+
+    .xai-breakdown-list { display: flex; flex-direction: column; gap: 6px; }
+    .xai-item {
+      display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px;
+      border-radius: 6px; background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .xai-icon { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; background: var(--cyan); }
+    .xai-icon.vapor { background: #38bdf8; box-shadow: 0 0 5px rgba(56,189,248,0.5); }
+    .xai-icon.snn { background: #f59e0b; box-shadow: 0 0 5px rgba(245,158,11,0.5); }
+    .xai-icon.spatial { background: #10b981; box-shadow: 0 0 5px rgba(16,185,129,0.5); }
+    .xai-icon.pinn { background: #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }
+
+    .xai-item-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .xai-item-head { display: flex; justify-content: space-between; align-items: baseline; }
+    .xai-item-title { font-size: 10px; font-weight: 600; color: var(--text-primary); }
+    .xai-item-metric { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; color: var(--cyan); }
+    .xai-item-desc { font-size: 9.5px; color: var(--text-muted); line-height: 1.35; }
+
+    .xai-waterfall-box {
+      background: rgba(6, 12, 22, 0.6); border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .waterfall-title { font-size: 8.5px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.06em; }
+    .waterfall-list { display: flex; flex-direction: column; gap: 5px; }
+    .wf-row { display: flex; align-items: center; gap: 8px; font-size: 9.5px; }
+    .wf-lbl { width: 110px; color: var(--text-secondary); font-size: 9.5px; }
+    .wf-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .wf-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--cyan), var(--blue)); transition: width 0.3s; }
+    .wf-pct { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; color: var(--text-primary); width: 34px; text-align: right; }
+
+    .btn-demo {
+      background: linear-gradient(135deg, rgba(6,182,212,0.25), rgba(168,85,247,0.25));
+      border: 1px solid rgba(56, 189, 248, 0.5); color: #7dd3fc;
+      font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 6px;
+      cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 6px;
+    }
+    .btn-demo:hover { background: linear-gradient(135deg, rgba(6,182,212,0.4), rgba(168,85,247,0.4)); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+
+    /* ── RIGHT PANEL: CONTROLS & MONITORING ─────────────────────── */
+    #sidebar {
+      background: var(--bg-panel); display: flex; flex-direction: column;
+      overflow-y: auto; overflow-x: hidden;
+    }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+    .panel-block { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .block-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-muted); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Active Station Overview */
+    .station-banner {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .station-name-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .station-name { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .station-basin-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: rgba(56,189,248,0.12); color: var(--text-accent); }
+    .station-meta-row { display: flex; gap: 12px; font-size: 11px; color: var(--text-secondary); }
+    .station-meta-row span b { font-family: 'JetBrains Mono', monospace; color: var(--text-primary); }
+
+    /* Preset Scenarios */
+    .presets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .preset-btn {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; text-align: left; cursor: pointer;
+      transition: var(--transition); display: flex; flex-direction: column; gap: 2px;
+    }
+    .preset-btn:hover { background: var(--bg-card-hover); border-color: var(--border-mid); transform: translateY(-1px); }
+    .preset-title { font-size: 11px; font-weight: 700; }
+    .preset-sub { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .preset-btn.btn-cloudburst { border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.07); }
+    .preset-btn.btn-cloudburst .preset-title { color: var(--red); }
+    .preset-btn.btn-flashflood { border-color: rgba(249,115,22,0.35); background: rgba(249,115,22,0.07); }
+    .preset-btn.btn-flashflood .preset-title { color: var(--orange); }
+    .preset-btn.btn-moderate { border-color: rgba(59,130,246,0.35); background: rgba(59,130,246,0.07); }
+    .preset-btn.btn-moderate .preset-title { color: var(--blue); }
+    .preset-btn.btn-reset .preset-title { color: var(--text-secondary); }
+
+    /* Explicit Threshold Sliders */
+    .slider-group { display: flex; flex-direction: column; gap: 12px; }
+    .slider-box { display: flex; flex-direction: column; gap: 4px; }
+    .slider-head { display: flex; justify-content: space-between; align-items: baseline; }
+    .slider-title { font-size: 11px; font-weight: 600; color: var(--text-primary); }
+    .slider-readout { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--cyan); }
+    
+    input[type=range] {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
+      border-radius: 3px; background: rgba(255,255,255,0.1); outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+      background: var(--cyan); box-shadow: 0 0 6px rgba(6,182,212,0.6); cursor: pointer;
+    }
+    .slider-guide-track {
+      display: flex; justify-content: space-between; font-size: 8.5px;
+      font-family: 'JetBrains Mono', monospace; color: var(--text-muted); margin-top: 1px;
+    }
+    .slider-guide-track .hl { color: var(--yellow); font-weight: 600; }
+    .slider-guide-track .danger { color: var(--red); font-weight: 600; }
+
+    /* Prediction & AI Risk Output */
+    .nowcast-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px; margin-bottom: 10px;
+    }
+    .nowcast-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .nowcast-lbl { font-size: 11px; color: var(--text-secondary); }
+    .nowcast-prob { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; color: var(--green); line-height: 1; }
+    .nowcast-prob.watch { color: var(--yellow); }
+    .nowcast-prob.warning { color: var(--orange); }
+    .nowcast-prob.danger, .nowcast-prob.severe { color: var(--red); }
+    
+    .prob-bar {
+      height: 7px; background: rgba(255,255,255,0.06); border-radius: 4px;
+      position: relative; overflow: visible; margin-bottom: 8px;
+    }
+    .prob-bar-fill {
+      height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green), var(--cyan));
+      transition: width 0.3s ease, background 0.3s; min-width: 2px;
+    }
+    .prob-bar-fill.watch { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
+    .prob-bar-fill.warning { background: linear-gradient(90deg, var(--orange), #f97316); }
+    .prob-bar-fill.danger, .prob-bar-fill.severe { background: linear-gradient(90deg, var(--orange), var(--red)); }
+    .prob-marker {
+      position: absolute; top: -3px; left: 15%; width: 2px; height: 13px;
+      background: rgba(250,204,21,0.65);
+    }
+    .prob-marker-tag {
+      position: absolute; top: -14px; left: 13.5%; font-size: 8px;
+      font-family: 'JetBrains Mono', monospace; color: rgba(250,204,21,0.85); white-space: nowrap;
+    }
+
+    /* Live Incident Timing Timeline (Actual Clock Times IST) */
+    .incident-timing-box {
+      margin: 10px 0; background: rgba(6, 12, 22, 0.7);
+      border: 1px solid rgba(99, 179, 237, 0.18); border-radius: 8px; padding: 10px 12px;
+    }
+    .timing-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 9.5px; font-weight: 700; color: var(--text-muted);
+      letter-spacing: 0.06em; margin-bottom: 8px;
+    }
+    .timing-live-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 7px;
+      border-radius: 4px; background: rgba(34, 197, 94, 0.12); color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 700;
+    }
+    .timing-live-badge.watch { background: rgba(234, 179, 8, 0.14); color: var(--yellow); border-color: rgba(234, 179, 8, 0.4); }
+    .timing-live-badge.warning { background: rgba(249, 115, 22, 0.16); color: var(--orange); border-color: rgba(249, 115, 22, 0.45); }
+    .timing-live-badge.danger { background: rgba(239, 68, 68, 0.2); color: var(--red); border-color: rgba(239, 68, 68, 0.55); animation: pulseAlert 1.2s infinite; }
+
+    .timing-grid { display: flex; flex-direction: column; gap: 7px; }
+    .timing-item {
+      display: flex; align-items: flex-start; gap: 9px; padding: 5px 8px; border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.03);
+      transition: var(--transition);
+    }
+    .timing-item:hover { background: rgba(255, 255, 255, 0.05); }
+    .timing-icon { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+    .dot-rain { background: var(--cyan); box-shadow: 0 0 6px rgba(6, 182, 212, 0.5); }
+    .dot-cloudburst { background: var(--orange); box-shadow: 0 0 6px rgba(249, 115, 22, 0.5); }
+    .dot-flood { background: var(--red); box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+    .dot-evac { background: #f43f5e; box-shadow: 0 0 6px rgba(244, 63, 94, 0.5); }
+
+    .timing-content { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .timing-title { font-size: 10px; font-weight: 600; color: var(--text-secondary); }
+    .timing-time {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+      color: var(--text-primary); letter-spacing: 0.02em;
+    }
+    .timing-time.active { color: var(--cyan); }
+    .timing-time.warning { color: var(--orange); }
+    .timing-time.danger { color: var(--red); }
+    .timing-sub { font-size: 9.5px; color: var(--text-muted); }
+
+    .nowcast-detail-row {
+      display: flex; justify-content: space-between; font-size: 11px;
+      padding: 3px 0; border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .nowcast-detail-row .k { color: var(--text-muted); }
+    .nowcast-detail-row .v { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--text-primary); }
+    .nowcast-detail-row .v.danger { color: var(--red); }
+
+    /* Pipeline Status Indicators */
+    .pipeline-grid { display: flex; flex-direction: column; gap: 5px; }
+    .pipe-step {
+      display: flex; align-items: center; gap: 8px; padding: 6px 9px;
+      border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid transparent;
+      font-size: 11px;
+    }
+    .pipe-step.active { border-color: rgba(74,222,128,0.25); background: rgba(74,222,128,0.04); }
+    .pipe-step.firing { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
+    .pipe-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .pipe-step.active .pipe-dot { background: var(--green); }
+    .pipe-step.firing .pipe-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .pipe-info { flex: 1; min-width: 0; }
+    .pipe-title { font-weight: 600; color: var(--text-primary); }
+    .pipe-sub { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .pipe-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted); }
+    .pipe-step.active .pipe-badge { background: rgba(74,222,128,0.15); color: var(--green); }
+    .pipe-step.firing .pipe-badge { background: rgba(239,68,68,0.2); color: var(--red); }
+
+    /* Feed */
+    #alert-feed { max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    #alert-feed::-webkit-scrollbar { width: 3px; }
+    #alert-feed::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .feed-card {
+      padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-start;
+    }
+    .feed-card.danger { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+    .feed-card.warn { border-color: rgba(234,179,8,0.25); }
+    .feed-card-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-top: 3px; flex-shrink: 0; }
+    .feed-card.danger .feed-card-dot { background: var(--red); }
+    .feed-card.warn .feed-card-dot { background: var(--yellow); }
+    .feed-card-body { flex: 1; min-width: 0; }
+    .feed-card-title { font-size: 10.5px; font-weight: 600; color: var(--text-primary); }
+    .feed-card-sub { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+    /* Technical Modal */
+    #modal-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+      z-index: 3000; display: none; align-items: center; justify-content: center;
+    }
+    #modal-backdrop.open { display: flex; }
+    .modal-dialog {
+      width: 720px; max-width: 90vw; max-height: 85vh;
+      background: #08101e; border: 1px solid var(--border-mid);
+      border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal-head {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-head h3 { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .modal-close { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+    .modal-body { padding: 18px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+    .modal-body h4 { font-size: 12px; color: var(--text-primary); margin: 12px 0 6px; }
+    .modal-body code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rgba(255,255,255,0.06); padding: 2px 5px; border-radius: 3px; color: var(--cyan); }
+
+    /* ── Developer Incident Simulation Toolbar ── */
+    .dev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+    .dev-btn {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 9px; text-align: left; cursor: pointer;
+      transition: var(--transition); display: flex; flex-direction: column; gap: 2px;
+    }
+    .dev-btn:hover { transform: translateY(-1px); }
+    .dev-btn.cb { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
+    .dev-btn.cb:hover { background: rgba(239,68,68,0.16); box-shadow: 0 0 10px rgba(239,68,68,0.25); }
+    .dev-btn.cb .dev-title { color: var(--red); }
+    .dev-btn.ts { border-color: rgba(249,115,22,0.4); background: rgba(249,115,22,0.08); }
+    .dev-btn.ts:hover { background: rgba(249,115,22,0.16); box-shadow: 0 0 10px rgba(249,115,22,0.25); }
+    .dev-btn.ts .dev-title { color: var(--orange); }
+    .dev-btn.hr { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); }
+    .dev-btn.hr:hover { background: rgba(59,130,246,0.16); box-shadow: 0 0 10px rgba(59,130,246,0.25); }
+    .dev-btn.hr .dev-title { color: #60a5fa; }
+    .dev-btn.rr { border-color: rgba(6,182,212,0.35); background: rgba(6,182,212,0.06); }
+    .dev-btn.rr:hover { background: rgba(6,182,212,0.14); }
+    .dev-btn.rr .dev-title { color: #67e8f9; }
+    .dev-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    .dev-sub { font-size: 8.5px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Telemetry View Switcher & Monitoring Gauges ── */
+    .telemetry-header-row {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+    }
+    .telemetry-view-toggles {
+      display: flex; gap: 4px; background: rgba(255,255,255,0.04);
+      padding: 2px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .view-toggle-btn {
+      background: transparent; border: none; color: var(--text-secondary);
+      font-size: 9.5px; font-weight: 600; padding: 3px 8px; border-radius: 4px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .view-toggle-btn.active {
+      background: rgba(6, 182, 212, 0.2); color: #67e8f9; font-weight: 700;
+    }
+
+    .telemetry-monitor-container { display: flex; flex-direction: column; gap: 7px; }
+    .gauge-card {
+      background: rgba(6, 12, 24, 0.7); border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 3px;
+      transition: var(--transition);
+    }
+    .gauge-card:hover {
+      background: rgba(6, 12, 24, 0.9); border-color: rgba(99, 179, 237, 0.22);
+    }
+    .gauge-row-top {
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    }
+    .gauge-title {
+      font-size: 10.5px; font-weight: 600; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .gauge-tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; padding: 1px 5px;
+      border-radius: 3px; background: rgba(255, 255, 255, 0.06); color: var(--text-muted);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .gauge-row-mid {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+    }
+    .gauge-rate {
+      font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .gauge-val {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--cyan);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .gauge-val.warning { color: var(--orange); }
+    .gauge-val.danger { color: var(--red); }
+
+    .gauge-track {
+      width: 100%; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.06);
+      position: relative; overflow: hidden; margin-top: 1px;
+    }
+    .gauge-fill {
+      height: 100%; border-radius: 4px; background: linear-gradient(90deg, #06b6d4, #3b82f6);
+      transition: width 0.35s ease, background 0.35s ease;
+    }
+    .gauge-fill.warning { background: linear-gradient(90deg, #eab308, #f97316); }
+    .gauge-fill.danger { background: linear-gradient(90deg, #f97316, #ef4444); }
+
+    .gauge-scale-row {
+      display: flex; justify-content: space-between; font-size: 8px;
+      font-family: 'JetBrains Mono', monospace; color: var(--text-muted); margin-top: 1px;
+    }
+    .gauge-scale-row span.hl { color: var(--yellow); font-weight: 600; }
+    .gauge-scale-row span.crit { color: var(--red); font-weight: 700; }
+
+    /* ── Multi-Location Vulnerability & Surge Arrival Ranking Board ── */
+    .ranking-count-chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.12); color: #38bdf8;
+    }
+    .ranking-board-container {
+      display: flex; flex-direction: column; gap: 6px; max-height: 250px; overflow-y: auto;
+    }
+    .ranking-board-container::-webkit-scrollbar { width: 3px; }
+    .ranking-board-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+    .ranking-item {
+      background: rgba(6, 12, 24, 0.7); border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 7px; padding: 7px 9px; display: flex; flex-direction: column; gap: 5px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .ranking-item:hover {
+      background: rgba(14, 26, 48, 0.85); border-color: rgba(99, 179, 237, 0.3); transform: translateX(2px);
+    }
+    .ranking-item.critical { border-left: 3px solid var(--red); }
+    .ranking-item.warning { border-left: 3px solid var(--orange); }
+    .ranking-item.advisory { border-left: 3px solid var(--yellow); }
+    .ranking-item.nominal { border-left: 3px solid var(--green); }
+
+    .ranking-head-row { display: flex; justify-content: space-between; align-items: center; }
+    .ranking-id-grp { display: flex; align-items: center; gap: 6px; }
+    .ranking-rank-num {
+      font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800;
+      color: var(--text-muted); width: 20px;
+    }
+    .ranking-loc-name { font-size: 11px; font-weight: 700; color: var(--text-primary); }
+    .ranking-badge-tier {
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+      padding: 1px 5px; border-radius: 3px; text-transform: uppercase;
+    }
+    .ranking-badge-tier.critical { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+    .ranking-badge-tier.warning { background: rgba(249, 115, 22, 0.2); color: var(--orange); }
+    .ranking-badge-tier.advisory { background: rgba(234, 179, 8, 0.18); color: var(--yellow); }
+    .ranking-badge-tier.nominal { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+
+    .ranking-meta-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 9.5px;
+    }
+    .ranking-m-item { display: flex; justify-content: space-between; color: var(--text-secondary); }
+    .ranking-m-item b { font-family: 'JetBrains Mono', monospace; color: var(--text-primary); }
+    .ranking-m-item b.crit { color: var(--red); }
+
+    .ranking-score-bar-track {
+      width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;
+    }
+    .ranking-score-bar-fill {
+      height: 100%; border-radius: 2px; background: linear-gradient(90deg, #22c55e, #38bdf8);
+      transition: width 0.3s;
+    }
+    .ranking-score-bar-fill.warning { background: linear-gradient(90deg, #eab308, #f97316); }
+    .ranking-score-bar-fill.critical { background: linear-gradient(90deg, #f97316, #ef4444); }
+
+    /* ── Multi-Model Pipeline Diagnostics Board with Indicator Lights ── */
+    .model-board-list { display: flex; flex-direction: column; gap: 7px; }
+    .model-card {
+      background: rgba(6, 12, 24, 0.7); border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
+      transition: var(--transition);
+    }
+    .model-card.firing {
+      border-color: rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.06);
+    }
+    .model-card.active-proc {
+      border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.05);
+    }
+
+    .model-card-head { display: flex; align-items: center; gap: 8px; }
+    .model-led {
+      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+      transition: var(--transition);
+    }
+    .model-led.led-off { background: #334155; box-shadow: none; }
+    .model-led.led-standby { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+    .model-led.led-active { background: #06b6d4; box-shadow: 0 0 8px rgba(6, 182, 212, 0.75); animation: pulseCyan 1.2s infinite; }
+    .model-led.led-warning { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.75); animation: pulseAmber 1s infinite; }
+    .model-led.led-fired { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.9); animation: pulseLed 0.8s infinite; }
+    @keyframes pulseCyan { 0%, 100% { box-shadow: 0 0 3px rgba(6,182,212,0.4); } 50% { box-shadow: 0 0 10px rgba(6,182,212,0.85); } }
+    @keyframes pulseAmber { 0%, 100% { box-shadow: 0 0 3px rgba(245,158,11,0.4); } 50% { box-shadow: 0 0 10px rgba(245,158,11,0.85); } }
+    @keyframes pulseLed { 0%, 100% { box-shadow: 0 0 4px rgba(239,68,68,0.5); } 50% { box-shadow: 0 0 14px rgba(239,68,68,1); } }
+
+    .model-meta { flex: 1; min-width: 0; }
+    .model-title { font-size: 10.5px; font-weight: 700; color: var(--text-primary); }
+    .model-subtitle { font-size: 8px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .model-badge {
+      font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05); color: var(--text-muted); text-transform: uppercase;
+    }
+    .model-badge.active { background: rgba(6, 182, 212, 0.18); color: #67e8f9; }
+    .model-badge.fired { background: rgba(239, 68, 68, 0.22); color: var(--red); }
+    .model-badge.confirmed { background: rgba(34, 197, 94, 0.18); color: var(--green); }
+
+    .model-card-body {
+      display: flex; flex-direction: column; gap: 3px; font-size: 9.5px; padding-left: 17px;
+    }
+    .model-act-row { display: flex; flex-direction: column; gap: 1px; }
+    .model-act-row .m-k { font-size: 8.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .model-act-row .m-v { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--cyan); }
+    .model-act-row .m-desc { font-size: 9px; color: var(--text-secondary); line-height: 1.35; }
+
+    .model-handoff-box {
+      margin-top: 2px; background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 5px;
+      padding: 4px 7px; display: flex; flex-direction: column; gap: 1px;
+    }
+    .handoff-label { font-size: 8px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+    .handoff-target { font-size: 9.5px; font-weight: 700; color: #38bdf8; }
+    .handoff-data { font-size: 8.5px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+
+    /* Sleek Dark Leaflet Tooltip */
+    .leaflet-tooltip {
+      background: rgba(6, 12, 24, 0.92) !important;
+      border: 1px solid rgba(99, 179, 237, 0.35) !important;
+      border-radius: 6px !important;
+      color: #f1f5f9 !important;
+      font-family: 'Inter', sans-serif !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7) !important;
+      backdrop-filter: blur(10px) !important;
+      padding: 6px 9px !important;
+      line-height: 1.35 !important;
+    }
+    .leaflet-tooltip-top:before { border-top-color: rgba(6, 12, 24, 0.92) !important; }
+    .leaflet-tooltip-bottom:before { border-bottom-color: rgba(6, 12, 24, 0.92) !important; }
+    .leaflet-tooltip-left:before { border-left-color: rgba(6, 12, 24, 0.92) !important; }
+    .leaflet-tooltip-right:before { border-right-color: rgba(6, 12, 24, 0.92) !important; }
+
+    /* ── Floating Map Simulation HUD Overlay ── */
+    .map-sim-hud {
+      position: absolute; top: 12px; right: 54px; z-index: 500;
+      width: 320px; background: rgba(6, 12, 24, 0.9); backdrop-filter: blur(16px);
+      border: 1px solid rgba(99, 179, 237, 0.25); border-radius: 10px;
+      padding: 9px 12px; display: flex; flex-direction: column; gap: 6px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); pointer-events: auto;
+    }
+    .sim-hud-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sim-hud-status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); flex-shrink: 0;
+    }
+    .sim-hud-status-dot.active { background: var(--cyan); box-shadow: 0 0 8px rgba(6, 182, 212, 0.8); animation: pulseCyan 1s infinite; }
+    .sim-hud-status-dot.danger { background: var(--red); box-shadow: 0 0 10px rgba(239, 68, 68, 0.9); animation: pulseLed 0.8s infinite; }
+    .sim-hud-title { font-size: 10px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.05em; }
+    .sim-hud-stage-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700;
+      padding: 1px 5px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8;
+    }
+
+    .sim-hud-body { display: flex; flex-direction: column; gap: 3px; font-size: 9.5px; }
+    .sim-hud-model-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .hud-k { color: var(--text-muted); font-size: 8.5px; text-transform: uppercase; }
+    .hud-v { font-weight: 700; color: var(--cyan); font-family: 'JetBrains Mono', monospace; }
+    .sim-hud-action-row { color: var(--text-secondary); font-size: 9px; line-height: 1.35; }
+    .sim-hud-handoff-row {
+      background: rgba(255, 255, 255, 0.03); padding: 3px 6px; border-radius: 4px;
+      display: flex; gap: 6px; font-size: 8.5px;
+    }
+    .hud-hk { color: var(--text-muted); font-weight: 700; }
+    .hud-hv { color: #7dd3fc; font-family: 'JetBrains Mono', monospace; }
+
+    .sim-hud-accum-row {
+      border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 3px;
+      display: flex; justify-content: space-between; font-size: 9px;
+    }
+    .hud-ak { color: var(--text-muted); font-weight: 600; }
+    .hud-av { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+    .hud-av.danger { color: var(--red); }
+
+    .sim-hud-controls { display: flex; gap: 5px; margin-top: 2px; }
+    .sim-hud-btn {
+      flex: 1; padding: 4px 7px; border-radius: 5px; font-size: 9.5px; font-weight: 700;
+      cursor: pointer; transition: var(--transition); border: 1px solid transparent; text-align: center;
+    }
+    .sim-hud-btn.primary {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(168, 85, 247, 0.3));
+      border-color: rgba(56, 189, 248, 0.5); color: #7dd3fc;
+    }
+    .sim-hud-btn.primary:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.45), rgba(168, 85, 247, 0.45));
+    }
+    .sim-hud-btn.secondary {
+      background: rgba(255, 255, 255, 0.05); border-color: var(--border); color: var(--text-secondary);
+    }
+    .sim-hud-btn.secondary:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.09); }
+
+
+    /* ── Simulation Focus Mode & Glowing Highlights ── */
+    body.sim-focus-mode .hide-in-focus { display: none !important; }
+    
+    .btn-focus-toggle {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 11px; font-weight: 700;
+      padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: var(--transition);
+    }
+    .btn-focus-toggle.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(168, 85, 247, 0.25));
+      border-color: rgba(56, 189, 248, 0.6); color: #7dd3fc;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+    }
+
+    .changing-location-glow {
+      animation: locationGlowPulse 1.2s infinite ease-in-out;
+    }
+    @keyframes locationGlowPulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8), 0 0 12px rgba(239, 68, 68, 0.8); }
+      50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0), 0 0 30px rgba(239, 68, 68, 1); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 0 12px rgba(239, 68, 68, 0.8); }
+    }
+
+    .corridor-glowing {
+      filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.85));
+      animation: pulseCorridorGlow 1.4s infinite alternate;
+    }
+    @keyframes pulseCorridorGlow {
+      0% { opacity: 0.75; }
+      100% { opacity: 1.0; filter: drop-shadow(0 0 18px rgba(239, 68, 68, 1)); }
+    }
+
+    .element-changing-glow {
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.65) !important;
+      border-color: rgba(56, 189, 248, 0.85) !important;
+      animation: cardGlowPulse 1.2s infinite alternate;
+    }
+    @keyframes cardGlowPulse {
+      0% { box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); }
+      100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.85); }
+    }
+
+    /* ── HOW PINN IS BUILDING & SOLVING Inspector ── */
+    .pinn-how-container {
+      flex: 1; width: 100%; height: calc(100% - 38px);
+      background: #060e1e; overflow-y: auto; padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .pinn-how-container::-webkit-scrollbar { width: 3px; }
+    .pinn-how-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+    .pinn-pde-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .pde-card {
+      background: rgba(6, 12, 24, 0.75); border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 7px; padding: 7px 10px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .pde-card.critical {
+      border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.05);
+    }
+    .pde-head {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+    }
+    .pde-num {
+      font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 800; color: var(--cyan);
+    }
+    .pde-title { font-size: 10.5px; font-weight: 700; color: var(--text-primary); flex: 1; }
+    .pde-status {
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+      padding: 1px 5px; border-radius: 3px; background: rgba(34, 197, 94, 0.15); color: var(--green);
+    }
+    .pde-status.danger { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+
+    .pde-eq {
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #38bdf8;
+      background: rgba(255, 255, 255, 0.035); padding: 3px 6px; border-radius: 4px;
+      margin: 2px 0; border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .pde-body {
+      font-size: 9.5px; color: var(--text-secondary); line-height: 1.35;
+    }
+    .pde-body b { color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+
+  
+    /* Flow Path & Clean XAI Styling (No Formulas) */
+    .flow-pde-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .flow-card {
+      background: rgba(6, 12, 24, 0.75); border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px; padding: 5px 8px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .flow-card.critical { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.06); }
+    .flow-card-head { display: flex; justify-content: space-between; align-items: center; }
+    .flow-num { font-size: 8.5px; font-weight: 700; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+    .flow-badge { font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .flow-badge.danger { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .flow-metrics {
+      display: flex; justify-content: space-between; font-size: 9px; font-family: 'JetBrains Mono', monospace;
+      color: #e2e8f0; background: rgba(255, 255, 255, 0.035); padding: 2px 5px; border-radius: 4px;
+    }
+    .flow-desc { font-size: 8px; color: var(--text-muted); line-height: 1.25; }
+    .flow-accum-answer { font-size: 9.5px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .flow-status-pill {
+      font-size: 8.5px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      background: rgba(56, 189, 248, 0.15); color: #38bdf8; letter-spacing: 0.04em;
+    }
+    .xai-bullet-num {
+      width: 18px; height: 18px; border-radius: 50%; background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8; display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; flex-shrink: 0;
+    }
+
+  
+    /* ── USER HANDOFF STEPPER & DROPDOWN MODULE SELECTOR ───────────── */
+    .view-dropdown-wrap {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 8px;
+    }
+    .view-dropdown-tag {
+      font-size: 9.5px; font-weight: 700; color: #38bdf8; font-family: 'JetBrains Mono', monospace;
+    }
+    .module-dropdown-select, .segment-mini-select {
+      background: #0b1528; border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0; font-size: 10.5px; font-weight: 600;
+      border-radius: 4px; padding: 3px 6px; cursor: pointer; outline: none;
+    }
+    .module-dropdown-select:hover, .segment-mini-select:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .column-segment-bar {
+      padding: 5px 10px; background: rgba(6, 12, 24, 0.85);
+      border-bottom: 1px solid var(--border); display: flex;
+      justify-content: space-between; align-items: center; flex-shrink: 0;
+    }
+    .col-seg-lbl { font-size: 9px; font-weight: 700; color: var(--text-muted); }
+
+    /* Floating Map HUD Stepper */
+    .sim-hud-stepper {
+      display: flex; flex-direction: column; gap: 4px;
+      margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border);
+    }
+    .stepper-nav-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    }
+    .hud-nav-arrow-btn {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border);
+      color: var(--text-primary); font-size: 10px; font-weight: 700;
+      padding: 4px 8px; border-radius: 5px; cursor: pointer;
+      transition: var(--transition); display: flex; align-items: center; gap: 3px;
+    }
+    .hud-nav-arrow-btn:hover {
+      background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8;
+    }
+    .hud-nav-arrow-btn.highlight {
+      background: rgba(56, 189, 248, 0.25); border-color: rgba(56, 189, 248, 0.6); color: #7dd3fc;
+    }
+    .hud-stage-center {
+      display: flex; flex-direction: column; align-items: center; text-align: center; flex: 1; min-width: 0;
+    }
+    .hud-stage-num-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+      color: #38bdf8; letter-spacing: 0.04em;
+    }
+    .hud-stage-title-text {
+      font-size: 10px; font-weight: 700; color: #f8fafc;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+    }
+    .hud-handoff-action-btn {
+      width: 100%; background: linear-gradient(135deg, #0284c7, #0369a1);
+      border: 1px solid rgba(56, 189, 248, 0.5); color: #ffffff;
+      font-size: 10.5px; font-weight: 700; padding: 5px 10px; border-radius: 5px;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+      transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .hud-handoff-action-btn:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+    }
+    .hud-handoff-action-btn.danger {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+    .hud-stage-pills {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 2px;
+    }
+    .stage-pill {
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 7.5px; font-weight: 700;
+      padding: 2px 1px; border-radius: 3px; cursor: pointer;
+      text-align: center; transition: var(--transition);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .stage-pill.active {
+      background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.6); color: #38bdf8;
+    }
+
+    /* Active Model Stage Highlighting */
+    .model-card.active-model-stage {
+      border: 1.5px solid #38bdf8 !important;
+      background: rgba(56, 189, 248, 0.12) !important;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+    }
+    .pipeline-stepper-mini {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .mini-arrow-btn {
+      background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 9.5px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px; cursor: pointer;
+    }
+    .mini-arrow-btn:hover { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+    .mini-arrow-btn.highlight { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+    .mini-stage-badge {
+      font-size: 8.5px; font-weight: 700; color: #38bdf8; font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Spotlight Pop-up Modal */
+    #spotlight-modal {
+      display: none; position: fixed; top: 54px; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 8, 16, 0.88); backdrop-filter: blur(14px);
+      z-index: 1500; padding: 20px; overflow-y: auto;
+      align-items: center; justify-content: center;
+    }
+    #spotlight-modal.open { display: flex; }
+    .spotlight-dialog {
+      background: #08101e; border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 10px; max-width: 820px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15);
+      display: flex; flex-direction: column; overflow: hidden; max-height: 85vh;
+    }
+    .spotlight-head {
+      padding: 12px 16px; background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border); display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    .spotlight-icon-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8;
+    }
+    .spotlight-title {
+      font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #f8fafc;
+    }
+    .spotlight-close-btn {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border);
+      color: var(--text-secondary); border-radius: 5px; padding: 4px 10px;
+      font-size: 10px; font-weight: 600; cursor: pointer;
+    }
+    .spotlight-close-btn:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .spotlight-body { padding: 16px; overflow-y: auto; }
+
+    /* ── THEME TOGGLE BUTTON ─────────────────────────────────────── */
+    .theme-toggle-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 6px; cursor: pointer;
+      transition: var(--transition); user-select: none; flex-shrink: 0;
+    }
+    .theme-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.1); color: var(--text-primary);
+      border-color: var(--border-mid);
+    }
+    .theme-icon { flex-shrink: 0; }
+
+    /* ── LIGHT MODE THEME OVERRIDES ──────────────────────────────── */
+    html.light-mode,
+    body.light-mode {
+      --bg-main: #f1f5f9;
+      --bg-panel: rgba(255, 255, 255, 0.97);
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --border: rgba(15, 23, 42, 0.12);
+      --border-mid: rgba(15, 23, 42, 0.22);
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --text-accent: #0284c7;
+      --cyan: #0284c7;
+      --blue: #2563eb;
+      --purple: #9333ea;
+      --green: #16a34a;
+      --yellow: #ca8a04;
+      --orange: #ea580c;
+      --red: #dc2626;
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* Topbar Light Mode */
+    body.light-mode #topbar {
+      background: rgba(255, 255, 255, 0.97);
+      border-bottom-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .brand-title {
+      color: #000000;
+      background: none;
+      -webkit-background-clip: initial;
+      -webkit-text-fill-color: initial;
+    }
+    body.light-mode .station-chip {
+      background: rgba(15, 23, 42, 0.04);
+      border-color: rgba(15, 23, 42, 0.12);
+    }
+    body.light-mode .layer-selector {
+      background: rgba(15, 23, 42, 0.05);
+      border-color: rgba(15, 23, 42, 0.12);
+    }
+    body.light-mode .layer-btn {
+      color: #475569;
+    }
+    body.light-mode .layer-btn.active {
+      background: rgba(2, 132, 199, 0.15);
+      color: #0284c7;
+    }
+    body.light-mode .layer-btn:hover:not(.active) {
+      color: #0f172a;
+    }
+    body.light-mode #system-clock {
+      color: #475569;
+    }
+    body.light-mode .theme-toggle-btn {
+      background: rgba(15, 23, 42, 0.05);
+      border-color: rgba(15, 23, 42, 0.14);
+      color: #334155;
+    }
+    body.light-mode .theme-toggle-btn:hover {
+      background: rgba(15, 23, 42, 0.1);
+      color: #0f172a;
+    }
+    body.light-mode .view-dropdown-wrap {
+      background: rgba(15, 23, 42, 0.04);
+      border-color: rgba(15, 23, 42, 0.14);
+    }
+    body.light-mode .module-dropdown-select,
+    body.light-mode .segment-mini-select {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.18);
+      color: #0f172a;
+    }
+    body.light-mode .btn-tech {
+      background: rgba(147, 51, 234, 0.08);
+      border-color: rgba(147, 51, 234, 0.25);
+      color: #7c3aed;
+    }
+    body.light-mode .btn-tech:hover {
+      background: rgba(147, 51, 234, 0.16);
+    }
+    body.light-mode .btn-demo {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(147, 51, 234, 0.12));
+      border-color: rgba(2, 132, 199, 0.35);
+      color: #0284c7;
+    }
+    body.light-mode .btn-demo:hover {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.22), rgba(147, 51, 234, 0.22));
+    }
+
+    /* Left Panel & Cards Light Mode */
+    body.light-mode .column-segment-bar {
+      background: rgba(241, 245, 249, 0.95);
+      border-bottom-color: var(--border);
+    }
+    body.light-mode .dev-btn {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.12);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .dev-btn:hover {
+      background: #f8fafc;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    body.light-mode .dev-btn.cb { background: #fef2f2; border-color: rgba(220, 38, 38, 0.3); }
+    body.light-mode .dev-btn.cb:hover { background: #fee2e2; }
+    body.light-mode .dev-btn.ts { background: #fff7ed; border-color: rgba(234, 88, 12, 0.3); }
+    body.light-mode .dev-btn.ts:hover { background: #ffedd5; }
+    body.light-mode .dev-btn.hr { background: #eff6ff; border-color: rgba(37, 99, 235, 0.3); }
+    body.light-mode .dev-btn.hr:hover { background: #dbeafe; }
+    body.light-mode .dev-btn.rr { background: #f0fdfa; border-color: rgba(13, 148, 136, 0.3); }
+    body.light-mode .dev-btn.rr:hover { background: #ccfbf1; }
+
+    body.light-mode .gauge-card {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .gauge-card:hover {
+      background: #ffffff;
+      border-color: rgba(2, 132, 199, 0.4);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    body.light-mode .gauge-track {
+      background: #e2e8f0;
+    }
+    body.light-mode .gauge-tag {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    body.light-mode .ranking-item {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .ranking-item:hover {
+      background: #f8fafc;
+      border-color: rgba(2, 132, 199, 0.4);
+    }
+    body.light-mode .ranking-count-chip {
+      background: rgba(2, 132, 199, 0.1);
+      color: #0284c7;
+    }
+    body.light-mode .ranking-score-bar-track {
+      background: #e2e8f0;
+    }
+    body.light-mode .model-card {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .model-card.firing {
+      border-color: rgba(220, 38, 38, 0.4);
+      background: #fef2f2;
+    }
+    body.light-mode .model-card.active-proc {
+      border-color: rgba(2, 132, 199, 0.4);
+      background: #f0f9ff;
+    }
+    body.light-mode .model-badge {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    body.light-mode .model-handoff-box {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    /* Map Overlays & HUD Light Mode */
+    body.light-mode .filter-chip {
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(15, 23, 42, 0.15);
+      color: #334155;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+    body.light-mode .filter-chip:hover {
+      color: #0f172a;
+      border-color: #0284c7;
+    }
+    body.light-mode .filter-chip.active {
+      background: rgba(2, 132, 199, 0.15);
+      border-color: #0284c7;
+      color: #0284c7;
+    }
+    body.light-mode .map-legend {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(15, 23, 42, 0.15);
+      color: #334155;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+    body.light-mode .map-sim-hud {
+      background: rgba(255, 255, 255, 0.96);
+      border-color: rgba(15, 23, 42, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      color: #0f172a;
+    }
+    body.light-mode .sim-hud-title {
+      color: #0f172a;
+    }
+    body.light-mode .hud-stage-center {
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+    }
+    body.light-mode .hud-nav-arrow-btn {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #1e293b;
+    }
+    body.light-mode .hud-nav-arrow-btn:hover {
+      background: #f1f5f9;
+    }
+    body.light-mode .stage-pill {
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      color: #475569;
+    }
+    body.light-mode .stage-pill.active {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #ffffff;
+    }
+    body.light-mode .sim-hud-btn.secondary {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #334155;
+    }
+    body.light-mode .sim-hud-btn.secondary:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    /* PINN Simulator & 4 Flow Cards Light Mode */
+    body.light-mode #pinn-section {
+      background: #ffffff;
+      border-top-color: var(--border);
+    }
+    body.light-mode .pinn-header {
+      background: #f8fafc;
+      border-bottom-color: var(--border);
+    }
+    body.light-mode .pinn-ctrl-btn.secondary {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #334155;
+    }
+    body.light-mode .flood-canvas-wrap {
+      background: #f8fafc;
+    }
+    body.light-mode .pinn-how-container {
+      background: #f8fafc;
+    }
+    body.light-mode .flow-card {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .flow-badge {
+      background: rgba(2, 132, 199, 0.12);
+      color: #0284c7;
+    }
+    body.light-mode .flow-badge.danger {
+      background: rgba(220, 38, 38, 0.12);
+      color: #dc2626;
+    }
+    body.light-mode .flow-status-pill {
+      background: rgba(2, 132, 199, 0.12);
+      color: #0284c7;
+    }
+    body.light-mode .flow-metrics {
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+    }
+    body.light-mode .flow-desc {
+      color: #475569;
+    }
+
+    /* Right Panel Light Mode */
+    body.light-mode .station-banner,
+    body.light-mode .preset-btn,
+    body.light-mode .nowcast-card,
+    body.light-mode .incident-timing-box,
+    body.light-mode .feed-card,
+    body.light-mode .xai-summary-box,
+    body.light-mode .xai-waterfall-box {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    body.light-mode .station-meta-row span b {
+      color: #0f172a;
+    }
+    body.light-mode .preset-btn:hover {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.2);
+    }
+    body.light-mode .preset-btn.btn-cloudburst { background: #fef2f2; border-color: rgba(220, 38, 38, 0.3); }
+    body.light-mode .preset-btn.btn-flashflood { background: #fff7ed; border-color: rgba(234, 88, 12, 0.3); }
+    body.light-mode .preset-btn.btn-moderate { background: #eff6ff; border-color: rgba(37, 99, 235, 0.3); }
+    body.light-mode .timing-item,
+    body.light-mode .pipe-step,
+    body.light-mode .xai-item {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    body.light-mode .timing-item:hover,
+    body.light-mode .pipe-step:hover,
+    body.light-mode .xai-item:hover {
+      background: #f1f5f9;
+    }
+    body.light-mode .timing-title { color: #334155; }
+    body.light-mode .timing-time { color: #0f172a; }
+    body.light-mode .timing-sub { color: #64748b; }
+    body.light-mode input[type=range] {
+      background: #e2e8f0;
+    }
+    body.light-mode .prob-bar {
+      background: #e2e8f0;
+    }
+    body.light-mode .prob-marker {
+      background: rgba(202, 138, 4, 0.85);
+    }
+    body.light-mode .prob-marker-tag {
+      color: #a16207;
+    }
+    body.light-mode .wf-bar {
+      background: #e2e8f0;
+    }
+    body.light-mode .wf-fill {
+      background: linear-gradient(90deg, #0284c7, #2563eb);
+    }
+    body.light-mode .leaflet-tooltip {
+      background: rgba(255, 255, 255, 0.96) !important;
+      border-color: rgba(15, 23, 42, 0.2) !important;
+      color: #0f172a !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    }
+    body.light-mode .modal-dialog,
+    body.light-mode .spotlight-dialog {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.18);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+    body.light-mode .modal-head,
+    body.light-mode .spotlight-head {
+      background: #f8fafc;
+      border-bottom-color: rgba(15, 23, 42, 0.1);
+    }
+    body.light-mode .spotlight-title {
+      color: #0f172a;
+    }
+    body.light-mode .modal-body code {
+      background: #f1f5f9;
+      color: #0284c7;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header id="topbar">
+  <div>
+    <div class="brand-title">KERAUNOS</div>
+    <div class="brand-tag">AI Hyper-Local Early Warning System &middot; MoES PS 26077</div>
+  </div>
+
+  <div id="global-status-badge" class="status-badge">
+    <div class="dot"></div>
+    <span id="global-status-text">All 40 Stations Nominal</span>
+  </div>
+
+  <div class="topbar-spacer"></div>
+
+  <div class="station-chip">
+    <span class="lbl">Active AWS:</span>
+    <span class="val" id="topbar-station-name">Kedarnath AWS</span>
+  </div>
+
+  <div class="station-chip">
+    <span class="lbl">Basin:</span>
+    <span class="val" id="topbar-basin-name">Mandakini (Rudraprayag)</span>
+  </div>
+
+  <!-- Map Layer Switcher -->
+  <div class="layer-selector">
+    <button class="layer-btn active" id="btn-layer-topo" onclick="switchMapLayer('topo')">Topographic Terrain</button>
+    <button class="layer-btn" id="btn-layer-dark" onclick="switchMapLayer('dark')">Dark Matter</button>
+    <button class="layer-btn" id="btn-layer-sat" onclick="switchMapLayer('sat')">Satellite</button>
+  </div>
+
+  <div id="system-clock">--:--:-- IST</div>
+
+  <!-- Theme Toggle (Light / Dark Mode) -->
+  <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light / Dark Mode">
+    <svg id="theme-icon-sun" class="theme-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg id="theme-icon-moon" class="theme-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <span id="theme-toggle-label">Dark</span>
+  </button>
+
+  <!-- Module View Selector Dropdown -->
+  <div class="view-dropdown-wrap">
+    <span class="view-dropdown-tag">VIEW:</span>
+    <select id="module-view-dropdown" class="module-dropdown-select" onchange="onModuleViewSelect(this.value)">
+      <option value="all">All Modules (Default 3-Column)</option>
+      <option value="gauges">Live Gauges &amp; Bars</option>
+      <option value="nowcast">AI Nowcast &amp; Timelines</option>
+      <option value="pipeline">Active Model &amp; Pipeline Handoff</option>
+      <option value="pinn">River Flood Simulator (PINN)</option>
+      <option value="xai">Why Cloudburst (Explainable AI)</option>
+      <option value="ranking">Downstream Towns &amp; Evacuation Times</option>
+    </select>
+  </div>
+  <button class="btn-demo" id="btn-pipeline-demo" onclick="startAutomatedSimulationDemo()">&#9654; Run Pipeline Simulation</button>
+  <button class="btn-tech" onclick="toggleTechModal(true)">Architecture Specs</button>
+  <a href="new_ui.html" style="text-decoration:none; padding:5px 11px; border-radius:6px; background:linear-gradient(135deg, rgba(94,234,212,0.2), rgba(125,211,252,0.18)); border:1px solid rgba(94,234,212,0.5); color:#5eead4; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s;" title="Switch to New One-Glance Console UI">New Console (v2) &rarr;</a>
+</header>
+
+<!-- WORKSPACE -->
+<!-- WORKSPACE: 3-COLUMN MISSION CONTROL GRID (ALL VISIBLE AT ONCE, ZERO SCROLL) -->
+<div id="workspace">
+
+  <!-- ── COLUMN 1: SENSOR INGEST, TELEMETRY GAUGES & LOCATION IMPACT ── -->
+  <aside id="left-col" class="hud-col left">
+    <!-- Active Station Banner -->
+    <div class="panel-block">
+      <div class="block-label">
+        <span>Active AWS Station</span>
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--text-accent);" id="station-id-tag">RDP001</span>
+      </div>
+      <div class="station-banner">
+        <div class="station-name-row">
+          <div class="station-name" id="sidebar-station-name">Kedarnath AWS</div>
+          <span class="station-basin-badge" id="sidebar-station-basin">Mandakini Basin</span>
+        </div>
+        <div class="station-meta-row">
+          <span>Elev: <b id="sidebar-station-elev">3,583 m</b></span>
+          <span>Lat: <b id="sidebar-station-lat">30.734°N</b></span>
+          <span>Lon: <b id="sidebar-station-lon">79.066°E</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Developer Incident Simulation Triggers -->
+    <div class="panel-block" id="dev-sim-block">
+      <div class="block-label">
+        <span>Developer Event Randomizer</span>
+        <span style="font-size:8.5px;color:var(--text-accent);font-family:'JetBrains Mono',monospace;">40 STATIONS</span>
+      </div>
+      <div class="dev-grid">
+        <button class="dev-btn cb" onclick="simulateRandomEvent('cloudburst')">
+          <span class="dev-title">Random Cloudburst</span>
+          <span class="dev-sub">R: 130-165 mm/h · P &gt; 95%</span>
+        </button>
+        <button class="dev-btn ts" onclick="simulateRandomEvent('thunderstorm')">
+          <span class="dev-title">Random Thunderstorm</span>
+          <span class="dev-sub">R: 55-75 mm/h · Lightning</span>
+        </button>
+        <button class="dev-btn hr" onclick="simulateRandomEvent('heavyrain')">
+          <span class="dev-title">Random Heavy Rain</span>
+          <span class="dev-sub">R: 35-50 mm/h · Orographic</span>
+        </button>
+        <button class="dev-btn rr" onclick="simulateRandomEvent('rainfall')">
+          <span class="dev-title">Random Routine Rain</span>
+          <span class="dev-sub">R: 15-25 mm/h · Baseflow</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Gauges & Meters (Smooth Observable Progression) -->
+    <div class="panel-block" id="telemetry-block" style="flex-shrink:0;">
+      <div class="telemetry-header-row">
+        <span class="block-label" style="margin-bottom:0;" id="telemetry-header-title">Live Telemetry Gauges</span>
+        <select id="left-col-segment-select" class="segment-mini-select" onchange="onLeftColSegmentSelect(this.value)">
+          <option value="gauges">View: Gauges &amp; Bars</option>
+          <option value="sliders">View: Manual Sliders</option>
+          <option value="ranking">View: Downstream Towns Focus</option>
+        </select>
+      </div>
+
+      <!-- VIEW A: LIVE TELEMETRY GAUGES MONITOR -->
+      <div id="telemetry-monitor-view" class="telemetry-monitor-container">
+        <!-- Gauge 1: GNSS IWV -->
+        <div class="gauge-card">
+          <div class="gauge-row-top">
+            <span class="gauge-title">Cloud Moisture (Water Vapor)</span>
+            <span class="gauge-tag" id="gauge-status-IWV">NORMAL (DRY)</span>
+          </div>
+          <div class="gauge-row-mid">
+            <span class="gauge-rate" id="gauge-rate-IWV">Vapor trend: steady</span>
+            <span class="gauge-val" id="readout-gauge-IWV">34 mm</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill-IWV" style="width: 23%;"></div>
+          </div>
+        </div>
+
+        <!-- Gauge 2: Rain Rate R -->
+        <div class="gauge-card">
+          <div class="gauge-row-top">
+            <span class="gauge-title">Current Rainfall Rate</span>
+            <span class="gauge-tag" id="gauge-status-R">NO RAIN</span>
+          </div>
+          <div class="gauge-row-mid">
+            <span class="gauge-rate" id="gauge-rate-R">Total in 1h: 0 mm</span>
+            <span class="gauge-val" id="readout-gauge-R">0 mm/h</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill-R" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Gauge 3: Rain Acceleration RI -->
+        <div class="gauge-card">
+          <div class="gauge-row-top">
+            <span class="gauge-title">Rain Spike (Acceleration)</span>
+            <span class="gauge-tag" id="gauge-status-RI">STEADY FLOW</span>
+          </div>
+          <div class="gauge-row-mid">
+            <span class="gauge-rate">How fast rain rises</span>
+            <span class="gauge-val" id="readout-gauge-RI">0 mm/h²</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill-RI" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Gauge 4: 30-Min Accumulation R30 -->
+        <div class="gauge-card">
+          <div class="gauge-row-top">
+            <span class="gauge-title">Rain in Last 30 Minutes</span>
+            <span class="gauge-tag" id="gauge-status-R30">DRY SOIL</span>
+          </div>
+          <div class="gauge-row-mid">
+            <span class="gauge-rate">Ground absorption</span>
+            <span class="gauge-val" id="readout-gauge-R30">0 mm</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill-R30" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Gauge 5: Lightning Strikes -->
+        <div class="gauge-card">
+          <div class="gauge-row-top">
+            <span class="gauge-title">Lightning Strikes</span>
+            <span class="gauge-tag" id="gauge-status-L">QUIET</span>
+          </div>
+          <div class="gauge-row-mid">
+            <span class="gauge-rate">Storm intensity</span>
+            <span class="gauge-val" id="readout-gauge-L">0 /min</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill-L" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Gauge 6: Riverbed Depth h -->
+        <div class="gauge-card">
+          <div class="gauge-row-top">
+            <span class="gauge-title">River Water Level at Gorge</span>
+            <span class="gauge-tag" id="gauge-status-H">SAFE BASEFLOW</span>
+          </div>
+          <div class="gauge-row-mid">
+            <span class="gauge-rate" id="gauge-rate-H">Bottleneck Choke</span>
+            <span class="gauge-val" id="readout-gauge-H">0.4 m</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill-H" style="width: 5%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW B: MANUAL CALIBRATION SLIDERS -->
+      <div id="telemetry-sliders-view" class="slider-group" style="display:none;margin-top:6px;">
+        <div class="slider-box">
+          <div class="slider-head"><span class="slider-title">GNSS IWV</span><span class="slider-readout" id="readout-IWV">34 mm</span></div>
+          <input type="range" id="slider-IWV" min="20" max="80" step="1" value="34" oninput="onPrecursorSliderChange()" />
+        </div>
+        <div class="slider-box">
+          <div class="slider-head"><span class="slider-title">Rain Rate (R)</span><span class="slider-readout" id="readout-R">0 mm/h</span></div>
+          <input type="range" id="slider-R" min="0" max="200" step="1" value="0" oninput="onPrecursorSliderChange()" />
+        </div>
+        <div class="slider-box">
+          <div class="slider-head"><span class="slider-title">Accumulation (R30)</span><span class="slider-readout" id="readout-R30">0 mm</span></div>
+          <input type="range" id="slider-R30" min="0" max="150" step="1" value="0" oninput="onPrecursorSliderChange()" />
+        </div>
+        <div class="slider-box">
+          <div class="slider-head"><span class="slider-title">Acceleration (RI)</span><span class="slider-readout" id="readout-RI">0 mm/h²</span></div>
+          <input type="range" id="slider-RI" min="0" max="60" step="1" value="0" oninput="onPrecursorSliderChange()" />
+        </div>
+        <div class="slider-box">
+          <div class="slider-head"><span class="slider-title">Lightning (L)</span><span class="slider-readout" id="readout-L">0 fl/min</span></div>
+          <input type="range" id="slider-L" min="0" max="60" step="1" value="0" oninput="onPrecursorSliderChange()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Downstream Locations Severity & Surge Arrival Ranking Matrix -->
+    <div class="panel-block" style="flex:1;border-bottom:none;">
+      <div class="block-label">
+        <span>Downstream Towns &amp; Arrival Times (IST)</span>
+        <span class="ranking-count-chip" id="ranking-station-count">6 Impact Zones</span>
+      </div>
+      <div class="ranking-board-container" id="ranking-board-container">
+        <!-- Dynamically rendered -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── COLUMN 2: CENTER STAGE — GEOSPATIAL MAP & PINN HYDRODYNAMICS (SIDE-BY-SIDE) ── -->
+  <main id="center-col" class="hud-center">
+    <!-- Upper: Interactive Geospatial Leaflet Map -->
+    <div id="map-view" style="flex:1;width:100%;position:relative;min-height:0;">
+      <div id="station-map" style="width:100%;height:100%;"></div>
+
+      <!-- Filter Bar -->
+      <div class="map-filter-bar">
+        <button class="filter-chip active" onclick="setBasinFilter('all', this)">All Basins (40)</button>
+        <button class="filter-chip" onclick="setBasinFilter('rudraprayag', this)">Mandakini / Kedarnath</button>
+        <button class="filter-chip" onclick="setBasinFilter('chamoli', this)">Alaknanda / Chamoli</button>
+        <button class="filter-chip" onclick="setBasinFilter('uttarkashi', this)">Bhagirathi / Gangotri</button>
+        <button class="filter-chip" onclick="setBasinFilter('pithoragarh', this)">Kali / Pithoragarh</button>
+        <button class="filter-chip" onclick="setBasinFilter('assam', this)">Assam Floodplain</button>
+      </div>
+
+      <!-- Map Legend -->
+      <div class="map-legend">
+        <div class="legend-title">Geospatial Legend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div> Normal Telemetry</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#eab308;"></div> Watch Precursor</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div> Warning Window</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> Severe Cloudburst</div>
+        <div class="legend-item"><div class="legend-poly"></div> Downstream Accumulation Corridor</div>
+      </div>
+
+      <!-- Floating Map Simulation HUD -->
+      <div id="map-simulation-hud" class="map-sim-hud">
+        <div class="sim-hud-header">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div class="sim-hud-status-dot" id="sim-hud-dot"></div>
+            <span class="sim-hud-title" id="sim-hud-title">PIPELINE MONITOR · STANDBY</span>
+          </div>
+          <span class="sim-hud-stage-badge" id="sim-hud-stage">PHASE 0/5</span>
+        </div>
+        <div class="sim-hud-body">
+          <div class="sim-hud-model-row">
+            <span class="hud-k">Who is working:</span>
+            <span class="hud-v" id="sim-hud-active-model">Ambient Telemetry Ingest</span>
+          </div>
+          <div class="sim-hud-action-row" id="sim-hud-action">
+            Monitoring 40 mountain stations. Sensor is sleeping to save battery.
+          </div>
+          <div class="sim-hud-handoff-row" id="sim-hud-handoff">
+            <span class="hud-hk">Passing data to:</span>
+            <span class="hud-hv" id="sim-hud-handoff-text">Sensors &rarr; Smart Battery Switch (SNN)</span>
+          </div>
+          <div class="sim-hud-accum-row" id="sim-hud-accum-row">
+            <span class="hud-ak">Flood at river gorge:</span>
+            <span class="hud-av" id="sim-hud-accum-text">Safe 0.4m (Normal river flow)</span>
+          </div>
+        </div>
+        <!-- Manual User-Controlled Model Handoff Stepper -->
+        <div class="sim-hud-stepper">
+          <div class="stepper-nav-row">
+            <button class="hud-nav-arrow-btn" id="btn-hud-prev-stage" onclick="stepPipelineStage(-1)" title="Go back to previous model">
+              &larr; Prev Model
+            </button>
+            <div class="hud-stage-center" id="hud-stage-center">
+              <span class="hud-stage-num-badge" id="hud-stage-num-badge">STAGE 1 / 5</span>
+              <span class="hud-stage-title-text" id="hud-stage-title-text">1. Weather Sensors</span>
+            </div>
+            <button class="hud-nav-arrow-btn highlight" id="btn-hud-next-stage" onclick="stepPipelineStage(1)" title="Hand over data to next model">
+              Next Model &rarr;
+            </button>
+          </div>
+
+          <button class="hud-handoff-action-btn" id="btn-hud-handoff" onclick="stepPipelineStage(1)">
+            Hand Over Data to Next Model &rarr;
+          </button>
+
+          <!-- Quick 5-stage jump pills -->
+          <div class="hud-stage-pills" id="hud-stage-pills">
+            <button class="stage-pill active" onclick="setPipelineStage(1)">1. Sensors</button>
+            <button class="stage-pill" onclick="setPipelineStage(2)">2. SNN Switch</button>
+            <button class="stage-pill" onclick="setPipelineStage(3)">3. AI Nowcast</button>
+            <button class="stage-pill" onclick="setPipelineStage(4)">4. Neighbor Check</button>
+            <button class="stage-pill" onclick="setPipelineStage(5)">5. PINN Simulator</button>
+          </div>
+        </div>
+
+        <div class="sim-hud-controls" style="margin-top:4px;">
+          <button class="sim-hud-btn secondary" id="btn-hud-play" onclick="startAutomatedSimulationDemo()" style="font-size:9.5px;padding:3px 7px;">Auto Walkthrough</button>
+          <button class="sim-hud-btn secondary" id="btn-hud-pause" onclick="pauseSimulationDemo()" style="display:none;font-size:9.5px;padding:3px 7px;">Pause</button>
+          <button class="sim-hud-btn secondary" onclick="resetSimulationDemo()" style="font-size:9.5px;padding:3px 7px;">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lower: 2D Riverbed Hydrodynamics & Surge Flow Path ("What Is Going Where") -->
+    <div id="pinn-section">
+      <div class="pinn-header">
+        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+          <span class="pinn-title" id="pinn-valley-title" title="Riverbed Flood Simulation">River Flood: New Tehri</span>
+          <span class="flow-status-pill" id="pinn-valley-status">MOUNTAIN GORGE</span>
+          <select id="pinn-segment-select" class="segment-mini-select" onchange="onPinnSegmentSelect(this.value)">
+            <option value="split">Riverbed + Flow</option>
+            <option value="canvas">Riverbed Only</option>
+            <option value="flow">Flow Only</option>
+          </select>
+        </div>
+        <div class="pinn-metrics-bar">
+          <span class="pinn-kpi">Depth: <b id="pinn-kpi-depth">0.4m</b></span>
+          <span class="pinn-kpi">Speed: <b id="pinn-kpi-vel">1.2 m/s</b></span>
+          <span class="pinn-kpi danger">Surge: <b id="pinn-kpi-eta">Standby</b></span>
+          <span class="pinn-kpi">Solver: <b id="pinn-kpi-risk" style="color:#4ade80;">IDLE</b></span>
+        </div>
+        <div class="pinn-action-buttons">
+          <button class="pinn-ctrl-btn" id="btn-pinn-toggle" onclick="togglePINNSimulation()">Simulate Flood</button>
+          <button class="pinn-ctrl-btn secondary" onclick="resetFloodSim()">Reset</button>
+        </div>
+      </div>
+
+      <!-- Split Dock: Left 58% 2D Riverbed Canvas | Right 42% Surge Flow Path ("What is going where") -->
+      <div class="pinn-dock-split">
+        <div class="flood-canvas-wrap" id="flood-canvas-wrap">
+          <canvas id="flood-canvas"></canvas>
+        </div>
+
+        <div id="pinn-how-wrap" class="pinn-how-container">
+          <div class="flow-pde-grid">
+            <!-- Stage 1: Deluge Origin / Inflow -->
+            <div class="flow-card" id="pde-card-inflow">
+              <div class="flow-card-head">
+                <span class="flow-num" id="pde-card1-num">1. RAIN HITS MOUNTAIN</span>
+                <span class="flow-badge" id="pde-status-inflow">RAIN SOURCE</span>
+              </div>
+              <div class="flow-metrics">
+                <span>Rain: <b id="pde-r-in">0 mm/h</b></span>
+                <span id="pde-inflow-metric-box">Inflow: <b id="pde-q0">180 m³/s</b></span>
+              </div>
+              <div class="flow-desc" id="pde-inflow-desc">
+                Heavy cloudburst rain pours massive water onto the top mountain ridge.
+              </div>
+            </div>
+
+            <!-- Stage 2: Slope & Torrent Velocity -->
+            <div class="flow-card" id="pde-card-mom">
+              <div class="flow-card-head">
+                <span class="flow-num" id="pde-card2-num">2. WATER RUSHES DOWNHILL</span>
+                <span class="flow-badge" id="pde-status-mom">FAST RAPIDS</span>
+              </div>
+              <div class="flow-metrics">
+                <span>Speed: <b id="pde-umax">1.2 m/s</b></span>
+                <span>Slope: <b id="pde-s0">11.4% Drop</b></span>
+              </div>
+              <div class="flow-desc" id="pde-mom-desc">
+                Steep mountain slope pulls the water down at high speed like a waterfall.
+              </div>
+            </div>
+
+            <!-- Stage 3: Choke vs Riverside Flow -->
+            <div class="flow-card" id="pde-card-mass">
+              <div class="flow-card-head">
+                <span class="flow-num" id="pde-card3-num">3. NARROW VALLEY GORGE</span>
+                <span class="flow-badge" id="pde-status-mass">NARROW CHOKE</span>
+              </div>
+              <div class="flow-metrics">
+                <span id="pde-narrows-lbl">Riverbed Narrows: <b id="pde-narrows-val">85m &rarr; 18m</b></span>
+                <span id="pde-choke-name" style="color:#38bdf8;">Sonprayag Gorge</span>
+              </div>
+              <div class="flow-desc" id="pde-mass-desc">
+                The riverbed gets 4 times narrower here, trapping the rushing water.
+              </div>
+            </div>
+
+            <!-- Stage 4: Inundation Verdict -->
+            <div class="flow-card critical" id="pde-card-choke">
+              <div class="flow-card-head">
+                <span class="flow-num" id="pde-card4-num">4. WILL WATER FLOOD HERE?</span>
+                <span class="flow-badge danger" id="pde-status-choke">WATER LEVEL</span>
+              </div>
+              <div class="flow-accum-answer">
+                <b id="pde-accum-ans" style="color:#4ade80;">NO &mdash; Safe 0.4m Natural Depth</b>
+              </div>
+              <div class="flow-desc" id="flow-choke-sub">
+                Will water overflow? Normal river depth, safe within banks.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── COLUMN 3: RIGHT PANEL — MODEL OUTPUTS, PIPELINE LIGHTS & XAI REASONING ── -->
+  <aside id="right-col" class="hud-col right">
+    <div class="column-segment-bar">
+      <span class="col-seg-lbl">RIGHT PANEL VIEW:</span>
+      <select id="right-col-segment-select" class="segment-mini-select" onchange="onRightColSegmentSelect(this.value)">
+        <option value="all">View: All Right Panels (Default)</option>
+        <option value="nowcast">View: AI Nowcast &amp; Timelines</option>
+        <option value="pipeline">View: System Pipeline &amp; Handoff</option>
+        <option value="xai">View: Why Cloudburst (XAI)</option>
+      </select>
+    </div>
+
+    <!-- Nowcast & Timelines -->
+    <div class="panel-block" id="block-nowcast">
+      <div class="block-label">
+        <span>Risk of Cloudburst &amp; Timelines</span>
+      </div>
+      <div class="nowcast-card" style="margin-bottom:6px;padding:9px 11px;">
+        <div class="nowcast-top" style="margin-bottom:4px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="nowcast-lbl">Risk of Cloudburst</span>
+            <span style="font-size:8px; font-family:'JetBrains Mono',monospace; padding:1px 5px; border-radius:3px; background:rgba(250,204,21,0.12); color:#facc15; border:1px solid rgba(250,204,21,0.3);">Alert &gt; 15%</span>
+          </div>
+          <span class="nowcast-prob" id="prob-val">2.1%</span>
+        </div>
+        <div class="prob-bar" style="margin-top:6px;margin-bottom:6px;">
+          <div class="prob-marker" title="15% Alert Threshold"></div>
+          <div class="prob-bar-fill" id="prob-fill" style="width: 2.1%;"></div>
+        </div>
+        <div class="nowcast-detail-row">
+          <span class="k">Current Status:</span>
+          <span class="v" id="nowcast-tier-text">NORMAL &mdash; Routine</span>
+        </div>
+
+        <!-- Incident Timelines in Actual Clock Times IST -->
+        <div class="incident-timing-box" style="margin:6px 0;padding:8px 10px;">
+          <div class="timing-header" style="margin-bottom:5px;">
+            <span>WHAT WILL HAPPEN WHEN (IST TIMELINE)</span>
+            <span class="timing-live-badge" id="timing-status-tag">STABLE</span>
+          </div>
+
+          <div class="timing-grid" style="gap:5px;">
+            <div class="timing-item" style="padding:3px 6px;">
+              <div class="timing-icon dot-rain" style="margin-top:2px;"></div>
+              <div class="timing-content">
+                <div class="timing-title">Heavy Rain Starts</div>
+                <div class="timing-time" id="time-rain-onset">--:-- IST</div>
+                <div class="timing-sub" id="time-rain-onset-sub">No rain projected (&gt; 6h)</div>
+              </div>
+            </div>
+
+            <div class="timing-item" style="padding:3px 6px;">
+              <div class="timing-icon dot-cloudburst" style="margin-top:2px;"></div>
+              <div class="timing-content">
+                <div class="timing-title">Peak Cloudburst Rain</div>
+                <div class="timing-time" id="time-cloudburst-peak">--:-- IST</div>
+                <div class="timing-sub" id="time-cloudburst-peak-sub">No cloudburst expected</div>
+              </div>
+            </div>
+
+            <div class="timing-item" style="padding:3px 6px;">
+              <div class="timing-icon dot-flood" style="margin-top:2px;"></div>
+              <div class="timing-content">
+                <div class="timing-title">Flood Reaches Town</div>
+                <div class="timing-time" id="time-downstream-flood">--:-- IST</div>
+                <div class="timing-sub" id="time-downstream-flood-sub">Normal baseflow</div>
+              </div>
+            </div>
+
+            <div class="timing-item" style="padding:3px 6px;">
+              <div class="timing-icon dot-evac" style="margin-top:2px;"></div>
+              <div class="timing-content">
+                <div class="timing-title">Last Time to Evacuate</div>
+                <div class="timing-time" id="time-evac-deadline">--:-- IST</div>
+                <div class="timing-sub" id="time-evac-deadline-sub">All clear</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nowcast-detail-row">
+          <span class="k">Predicted River Depth:</span>
+          <span class="v" id="downstream-depth-text">0.4 m (Normal baseflow)</span>
+        </div>
+        <div class="nowcast-detail-row">
+          <span class="k">Danger Bottleneck Town:</span>
+          <span class="v" id="downstream-settlement-text">Sonprayag &amp; Gaurikund</span>
+        </div>
+        <div class="nowcast-detail-row">
+          <span class="k">Water Goes Down By:</span>
+          <span class="v" id="time-recession">Nominal (No inundation)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-Model Pipeline Diagnostics Board with Indicator Lights -->
+    <div class="panel-block" id="pipeline-board-block">
+      <div class="block-label">
+        <span>System Pipeline &mdash; Who Does What</span>
+        <div class="pipeline-stepper-mini">
+          <button class="mini-arrow-btn" onclick="stepPipelineStage(-1)" title="Previous model">&larr;</button>
+          <span class="mini-stage-badge" id="mini-pipeline-badge">Model 1/5</span>
+          <button class="mini-arrow-btn highlight" onclick="stepPipelineStage(1)" title="Hand over to next model">&rarr;</button>
+        </div>
+      </div>
+
+      <div class="model-board-list">
+        <!-- Model 1: GNSS Gateway -->
+        <div class="model-card" id="mcard-gnss">
+          <div class="model-card-head">
+            <div class="model-led led-standby" id="mled-gnss"></div>
+            <div class="model-meta">
+              <div class="model-title">1. Weather &amp; Moisture Sensors</div>
+              <div class="model-subtitle">Reads moisture in the sky before rain starts</div>
+            </div>
+            <span class="model-badge" id="mbadge-gnss">STANDBY</span>
+          </div>
+          <div class="model-card-body">
+            <div class="model-act-row">
+              <span class="m-k">Trigger Condition:</span>
+              <span class="m-v" id="mact-gnss">Tropospheric IWV &ge; 50mm or dIWV/dt &ge; +5mm/h</span>
+            </div>
+            <div class="model-act-row">
+              <span class="m-k">What It Did:</span>
+              <span class="m-desc" id="mdesc-gnss">Continuous atmospheric moisture tracking. Baseline nominal (34mm).</span>
+            </div>
+            <div class="model-handoff-box">
+              <span class="handoff-label">Output Given To:</span>
+              <span class="handoff-target" id="mhandoff-target-gnss">SNN LIF Neuromorphic Precursor Gate</span>
+              <span class="handoff-data" id="mhandoff-data-gnss">Transmitting 1-min rain rate R(t) &amp; acceleration RI</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model 2: SNN LIF Neuromorphic Gate -->
+        <div class="model-card" id="mcard-snn">
+          <div class="model-card-head">
+            <div class="model-led led-off" id="mled-snn"></div>
+            <div class="model-meta">
+              <div class="model-title">2. Smart Battery Switch (SNN)</div>
+              <div class="model-subtitle">Sleeps to save battery; wakes up when heavy rain starts</div>
+            </div>
+            <span class="model-badge" id="mbadge-snn">DORMANT</span>
+          </div>
+          <div class="model-card-body">
+            <div class="model-act-row">
+              <span class="m-k">Trigger Condition:</span>
+              <span class="m-v" id="mact-snn">Sudden rain burst acceleration &ge; 15 mm/h&sup2;</span>
+            </div>
+            <div class="model-act-row">
+              <span class="m-k">What It Did:</span>
+              <span class="m-desc" id="mdesc-snn">V_mem = 0.00 &lt; 1.0. Conserving 91.4% edge battery power in sub-milliwatt sleep.</span>
+            </div>
+            <div class="model-handoff-box">
+              <span class="handoff-label">Output Given To:</span>
+              <span class="handoff-target" id="mhandoff-target-snn">1D-CNN + BiLSTM AI Heavy Nowcaster</span>
+              <span class="handoff-data" id="mhandoff-data-snn">Standby &mdash; Awaiting rapid rain surge to dispatch wake-up signal</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model 3: 1D-CNN + BiLSTM AI Heavy Nowcaster -->
+        <div class="model-card" id="mcard-cnn">
+          <div class="model-card-head">
+            <div class="model-led led-standby" id="mled-cnn"></div>
+            <div class="model-meta">
+              <div class="model-title">3. AI Weather Predictor (Nowcaster)</div>
+              <div class="model-subtitle">1D-CNN + BiLSTM AI (Predicts rain in the sky)</div>
+            </div>
+            <span class="model-badge" id="mbadge-cnn">STANDBY</span>
+          </div>
+          <div class="model-card-body">
+            <div class="model-act-row">
+              <span class="m-k">Trigger Condition:</span>
+              <span class="m-v" id="mact-cnn">Woken by SNN burst trigger; evaluates cloudburst probability</span>
+            </div>
+            <div class="model-act-row">
+              <span class="m-k">What It Did:</span>
+              <span class="m-desc" id="mdesc-cnn">Evaluated temporal tensor. Cloudburst risk P = 2.1% (Routine baseflow).</span>
+            </div>
+            <div class="model-handoff-box">
+              <span class="handoff-label">Output Given To:</span>
+              <span class="handoff-target" id="mhandoff-target-cnn">PINN Hydrodynamic Solver &amp; Spatial Gate</span>
+              <span class="handoff-data" id="mhandoff-data-cnn">Awaiting cloudburst trigger to dispatch boundary inflow hydrograph Q₀(t)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model 4: Spatial Confirmation Gate -->
+        <div class="model-card" id="mcard-spatial">
+          <div class="model-card-head">
+            <div class="model-led led-standby" id="mled-spatial"></div>
+            <div class="model-meta">
+              <div class="model-title">4. Neighbor Stations Check</div>
+              <div class="model-subtitle">Checks nearby stations to avoid false alarms</div>
+            </div>
+            <span class="model-badge" id="mbadge-spatial">PASS</span>
+          </div>
+          <div class="model-card-body">
+            <div class="model-act-row">
+              <span class="m-k">Trigger Condition:</span>
+              <span class="m-v" id="mact-spatial">Surrounding 50km station contrast confirms isolated cell</span>
+            </div>
+            <div class="model-act-row">
+              <span class="m-k">What It Did:</span>
+              <span class="m-desc" id="mdesc-spatial">Contrast against 50km neighbor AWS network verifies localized cell vs regional monsoon.</span>
+            </div>
+            <div class="model-handoff-box">
+              <span class="handoff-label">Output Given To:</span>
+              <span class="handoff-target" id="mhandoff-target-spatial">PINN Hydrodynamic Solver</span>
+              <span class="handoff-data" id="mhandoff-data-spatial">Dispatches spatial validation clearance pass</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model 5: PINN 2D Hydrodynamic SWE Solver -->
+        <div class="model-card" id="mcard-pinn">
+          <div class="model-card-head">
+            <div class="model-led led-off" id="mled-pinn"></div>
+            <div class="model-meta">
+              <div class="model-title">5. PINN River Flood Simulator</div>
+              <div class="model-subtitle">Simulates water flow &amp; depth on the ground</div>
+            </div>
+            <span class="model-badge" id="mbadge-pinn">IDLE</span>
+          </div>
+          <div class="model-card-body">
+            <div class="model-act-row">
+              <span class="m-k">Simulation Decision:</span>
+              <span class="m-v" id="mact-pinn">Simulation Decision: STANDBY (Safe river flow)</span>
+            </div>
+            <div class="model-act-row">
+              <span class="m-k">Flood Outcome:</span>
+              <span class="m-desc" id="maccum-pinn" style="color:var(--text-secondary);">Will water flood? &mdash; No flood risk. River is flowing normally.</span>
+            </div>
+            <div class="model-handoff-box">
+              <span class="handoff-label">Output Given To:</span>
+              <span class="handoff-target" id="mhandoff-target-pinn">Sirens &amp; Disaster Management (DDMA)</span>
+              <span class="handoff-data" id="mhandoff-data-pinn">Standby &mdash; Ready to broadcast exact flood arrival time and evacuation warning</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explainable AI (XAI) Clear Decision Reasoning -->
+    <div class="panel-block" id="block-xai" style="flex:1;border-bottom:none;">
+      <div class="block-label">
+        <span>Why Did the AI Call This a Cloudburst?</span>
+        <span class="xai-status-chip" id="xai-classification-chip">NORMAL BASEFLOW</span>
+      </div>
+
+      <div class="xai-card">
+        <!-- Headline & Question: Why Cloudburst vs Thunderstorm? -->
+        <div class="xai-summary-box">
+          <div class="xai-headline" id="xai-headline">Why Cloudburst vs Routine Thunderstorm?</div>
+          <div class="xai-narrative" id="xai-narrative">
+            Air moisture is normal (34mm). The AI sensors are sleeping and river flow is safe.
+          </div>
+        </div>
+
+        <!-- 3 Key Physical Evidence Bullets (Clear, zero math jargon!) -->
+        <div class="xai-breakdown-list">
+          <div class="xai-item">
+            <span class="xai-bullet-num">1</span>
+            <div class="xai-item-body">
+              <div class="xai-item-head">
+                <span class="xai-item-title">1. Cloud Moisture Before Rain</span>
+                <span class="xai-item-metric" id="xai-metric-iwv">34 mm (Normal)</span>
+              </div>
+              <div class="xai-item-desc" id="xai-desc-iwv">Cloudburst needs huge moisture in the sky (> 60mm) before rain begins. Normal storms have much less moisture (< 45mm).</div>
+            </div>
+          </div>
+
+          <div class="xai-item">
+            <span class="xai-bullet-num">2</span>
+            <div class="xai-item-body">
+              <div class="xai-item-head">
+                <span class="xai-item-title">2. Sudden Rain Spike</span>
+                <span class="xai-item-metric" id="xai-metric-snn">Steady Flow</span>
+              </div>
+              <div class="xai-item-desc" id="xai-desc-snn">Cloudburst rain increases very rapidly (> 30 mm/h² in 1 min) like an overhead bucket tipping over.</div>
+            </div>
+          </div>
+
+          <div class="xai-item">
+            <span class="xai-bullet-num">3</span>
+            <div class="xai-item-body">
+              <div class="xai-item-head">
+                <span class="xai-item-title">3. Trapped in One Valley</span>
+                <span class="xai-item-metric" id="xai-metric-spatial">Uniform Field</span>
+              </div>
+              <div class="xai-item-desc" id="xai-desc-spatial">Cloudbursts are small, intense storms trapped in one valley, while normal monsoon rain spreads everywhere.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Factor Attribution Percentage Bars -->
+        <div class="xai-waterfall-box">
+          <div class="waterfall-title">WHAT MADE THE AI DECIDE THIS?</div>
+          <div class="waterfall-list">
+            <div class="wf-row">
+              <span class="wf-lbl">Moisture in Clouds:</span>
+              <div class="wf-bar"><div class="wf-fill" id="wf-iwv" style="width: 10%;"></div></div>
+              <span class="wf-pct" id="wf-pct-iwv">+10%</span>
+            </div>
+            <div class="wf-row">
+              <span class="wf-lbl">Heavy Rain Speed:</span>
+              <div class="wf-bar"><div class="wf-fill" id="wf-r" style="width: 5%;"></div></div>
+              <span class="wf-pct" id="wf-pct-r">+5%</span>
+            </div>
+            <div class="wf-row">
+              <span class="wf-lbl">Sudden Rain Spike:</span>
+              <div class="wf-bar"><div class="wf-fill" id="wf-ri" style="width: 4%;"></div></div>
+              <span class="wf-pct" id="wf-pct-ri">+4%</span>
+            </div>
+            <div class="wf-row">
+              <span class="wf-lbl">Wet Ground:</span>
+              <div class="wf-bar"><div class="wf-fill" id="wf-r30" style="width: 2%;"></div></div>
+              <span class="wf-pct" id="wf-pct-r30">+2%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Architecture Specs Modal<!-- Architecture Specs Modal -->
+<div id="modal-backdrop" onclick="if(event.target===this)toggleTechModal(false)">
+  <div class="modal-dialog">
+    <div class="modal-head">
+      <h3>System Architecture &amp; Physical Parity (MoES PS 26077)</h3>
+      <button class="modal-close" onclick="toggleTechModal(false)">&times;</button>
+    </div>
+    <div class="modal-body">
+      <h4>Problem Statement Alignment</h4>
+      <p>Problem Statement 26077 (Ministry of Earth Sciences) requires hyper-local early warning for cloudbursts and flash floods with 2&ndash;6 hours advance lead time. Conventional radar and numerical weather prediction (NWP) fail in complex Himalayan terrain due to beam blockage and coarse 12km grid resolution.</p>
+      <h4>1. SNN Neuromorphic Precursor Gate</h4>
+      <p>A Leaky Integrate-and-Fire (LIF) neuron runs on micro-power edge hardware. It remains dormant during nominal conditions (saving 91.4% power) and fires an instant edge wake-up alert only when rapid rain intensification is detected.</p>
+      <h4>2. 1D-CNN + BiLSTM Neural Nowcaster</h4>
+      <p>Standardized features pass through a 1D temporal convolution followed by bidirectional LSTM and class head. Validated on historical IMD AWS datasets achieving <code>CSI = 0.4154</code>, <code>POD = 88.75%</code> at the 15% operational alert threshold.</p>
+      <h4>3. Tier-2 Spatial Confirmation Gate</h4>
+      <p>Computes the Spatial Localization Index <code>L = (R_core &minus; R_bg) / max(R_core, 1)</code> against surrounding AWS stations within a 50 km radius. If rain is uniform across all stations, false alarms are suppressed.</p>
+      <h4>4. PINN 2D SWE Flash Flood Hydrodynamic Inundation</h4>
+      <p>Simulates dynamic riverbed flood torrents and backwater pooling at valley bottlenecks (Sonprayag, Tapovan, Maneri).</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS (ISOLATED FROZEN V1 ARTIFACTS) -->
+<script src="v1_archive/js/stations_data.js?v=3.4"></script>
+<script src="v1_archive/js/neural_inference.js?v=3.4"></script>
+<script src="v1_archive/js/snn_gate.js?v=3.4"></script>
+<script src="v1_archive/js/spatial_gate.js?v=3.4"></script>
+<script src="v1_archive/js/pinn_canvas.js?v=3.4"></script>
+<script src="v1_archive/js/historical_events.js?v=3.4"></script>
+<script src="v1_archive/js/app.js?v=3.4"></script>
+
+<script>
+function toggleTechModal(show) {
+  var m = document.getElementById('modal-backdrop');
+  if (m) m.className = show ? 'open' : '';
+}
+</script>
+
+<!-- Fullscreen Spotlight Modal for Selected Module -->
+<div id="spotlight-modal" onclick="if(event.target===this)closeModuleSpotlight()">
+  <div class="spotlight-dialog">
+    <div class="spotlight-head">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="spotlight-icon-badge" id="spotlight-icon">FOCUS</span>
+        <span class="spotlight-title" id="spotlight-title">Module Spotlight</span>
+      </div>
+      <button class="spotlight-close-btn" onclick="closeModuleSpotlight()">Close Spotlight &times;</button>
+    </div>
+    <div class="spotlight-body" id="spotlight-body">
+      <!-- Dynamically injected module content -->
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

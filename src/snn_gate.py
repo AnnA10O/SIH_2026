@@ -182,8 +182,8 @@ class ThunderstormSNNGate:
     Features: [IWV_trend, pressure_trend, wind_shift, temp_drop, CAPE_trend] (5 features).
     """
     FEATURE_NAMES = ["IWV_trend", "pressure_trend", "wind_shift", "temp_drop", "CAPE_trend"]
-    # Normalization scales: +5mm/hr IWV, -3hPa pressure drop, 10m/s wind shift, 4C temp drop, 500 J/kg CAPE rise
-    SCALES = np.array([5.0, 3.0, 10.0, 4.0, 500.0], dtype=np.float32)
+    # Normalization scales: +5mm/hr IWV, -3hPa pressure drop, 10m/s wind shift, 4C temp drop, 1500 J/kg CAPE rise
+    SCALES = np.array([5.0, 3.0, 10.0, 4.0, 1500.0], dtype=np.float32)
 
     def __init__(self, beta: float = 0.88, v_thresh: float = 1.0):
         self.beta = beta

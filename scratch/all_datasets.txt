@@ -1,0 +1,409 @@
+MSGIO_L2C_CTR || Represents the radiative temperature (in Kelvin) of the uppermost cloud layer.
+MSGIO_L2C_CRP || Provides instantaneous rain rates (mm/h) intensity
+MSGIO_L2C_PCP || Identifies precipitating clouds and give probability of precipitation occurrence by analysing cloud physical properties retrieved from satellite data.
+MSGIO_L2C_RDT || Identifies and forecasts rapidly developing thunderstorms. Outputs real-time predictions of storm intensity and evolution, based on geostationary satellite data.
+E06SCT_L4_SM_NP_DLY || EOS-06 Scatterometer high resolution Sea Ice Melt product over North Pole(Greenland) generated using L4 product
+E06SCT_L3_GS_GLB25 || Global Sea Ice
+E06SCT_L3_GS_GLB12 || Global Sea Ice
+E06OCM_L2C_LAC_SR || Land Surface Reflectance (LSR)  provides bottom of atmosphere (BOA)  LSR derived from RRS band data.
+E06OCM_L3_LAC_CQ || Daily composite of coastal water quality for coastal regions of Indian subcontinent
+E08GNSS_R_L2_OSW || Ocean Surface Wind Speed Product
+E06SCT_L4_AWV12km || Analyzed Winds(12.5 km) are computed using optimal interpolation. The wind derived products and fluxes are computed based on COREv3.0 bulk algorithms.
+E06SCT_L4_SI_NP || EOS-06 Scatterometer high resolution Sea Ice Extent product over North Pole generated using L4 product
+E06OCM_L2C_LAC_RT || Red Tide Index based on Deducted Spectral Ratio Method(unitless)
+E06OCM_L3C_LAC_PC || 8-day mosaic of Particulate Organic Carbon(POC) product is derived from EOS-06 satelllite Ocean Colour Monitor(OCM) sensor Remote sensing reflectance(Rrs) data using bands corresponding to blue, green and red channels. The POC is important to understand the organic carbon fluxes from phtoplankton, zooplankton and their detrital materials in the surface water and the water column and overall linked to ocean and biogeochemistry.
+E06OCM_L2C_LAC_WM || Scenewise Surface Water Extent
+E06OCM_L3C_LAC_FL || 8-day composite of Normalized Fluorescence Line Height (nFLH) for coastal regions of Indian subcontinent.
+E06OCM_L2C_LAC_EV || Scenewise Enhanced Vegetation Index
+MSGIO_L2C_CIP || The CIP(Convective Initiation Probability) provides a pixel based nowcast of probability of where a new convection is likely to start. It provides CI probability at three lead time 30,60 and 90 min, where probability percentage indicating greater confidence in occurance of convection activity which could lead to severe weather event.
+MSGIO_L2C_CTT || Cloud Type Product of the NWC/GEO. Information on the major cloud types and on snow/sea ice occurrence
+MSGIO_L2C_CRR || Convective Rainfall Rate Product of the NWC/GEO. Estimation of the precipitation rate associated to convective clouds
+MSGIO_L2C_CMI || Cloud Microphysics Product of the NWC/GEO. Information on cloud microphysics, as cloud thermodynamical phase, drop effective radius, cloud optical thickness and liquid water/ice path
+E06OCM_L2C_GAC_PC || Particulate Organic Carbon (POC) product is derived from EOS-06 satelllite Ocean Colour Monitor(OCM) sensor Remote sensing reflectance(Rrs) data using bands corresponding to blue, green and red channels. The POC is important to understand the organic carbon fluxes from phtoplankton, zooplankton and their detrital materials in the surface water and the water column and overall linked to ocean and biogeochemistry.
+E06OCM_L2C_LAC_PS || Scenewise Phytoplankton size class
+E06OCM_L2C_GAC_PR || Instantaneous_Photosynthetically_Active_Radiation
+E06OCM_L2C_GAC_OC || Inherent Optical  Properties
+E06OCM_L2C_GAC_GA || Coloured Dissolved Organic Matter (CDOM) Absorption Coefficient at 412nm (units m-1)
+E06OCM_L2C_LAC_OC || Inherent Optical  Properties
+E06OCM_L2C_LAC_PR || Instantaneous_Photosynthetically_Active_Radiation
+E06OCM_L2C_LAC_GA || Coloured Dissolved Organic Matter (CDOM) Absorption Coefficient at 412nm (units m-1)
+3SIMG_L2P_AMV || INSAT-3S Infrared, Visible, Water Vapour channel derived Wind
+E06OCM_L2C_LAC_AD || Scenewise Aerosol Optical Depth over Land
+3SIMG_L3B_SWR_DLY || Daily SWR from INSAT-3S
+3SIMG_L3B_IMC_DLY || Daily Rainfall derived using IMC algorithm from INSAT-3DS IMAGER
+3SIMG_L3B_LST_DLY || Daily Land surface temperature (LST) from INSAT-3DS IMAGER
+3RIMG_L3C_PET_DLY || Evapotranspiration (ET) is one of the important processes in the terrestrial water cycle. About 65% of rainwater is lost to the atmosphere due to the combined processes of evaporation and transpiration. In a given climate, reference evapotranspiration (ET0) is defined as the maximum evaporative demand of the atmosphere from a well-watered surface independent of crop type, crop development, and management practice. 
+3SIMG_L2P_WV_MERGED || This product is merged water vapour wind product using the algorithm for retrieving Atmospheric Motion Vectors (AMVs) from INSAT-3DR and INSAT-3S in staggering mode
+3SIMG_L2P_IRW_MERGED || Product is a merged wind product derived using the algorithm for retrieving Atmospheric Motion Vectors (AMVs) from INSAT-3DR and INSAT-3S in staggering mode
+3SSND_L2B_SB1 || Sounder Level2 data for B1 sector
+3SSND_L2B_SA2 || Sounder Level2 data for A2 sector
+3SSND_L2B_SA1 || Sounder Level2 data for A1 sector
+3SSND_L1B_SB1 || Sounder Level1 data for B1 sector
+3SSND_L1B_SA2 || Sounder Level1 data for A2 sector
+3SSND_L1B_SA1 || Sounder Level1 data for A1 sector
+3SIMG_L3G_IMR_WKL || Weekly IMR product from INSAT3S
+3SIMG_L3G_IMR_DLY || Daily IMR Rain  from INSAT-3S
+3SIMG_L3G_GPI_WKL || Weekly GPI product from INSAT3S
+3SIMG_L3G_GPI_DLY || Daily GPI from INSAT-3S
+3SIMG_L3C_PET_DLY || Evapotranspiration (ET) is one of the important processes in the terrestrial water cycle. About 65% of rainwater is lost to the atmosphere due to the combined processes of evaporation and transpiration. In a given climate, reference evapotranspiration (ET0) is defined as the maximum evaporative demand of the atmosphere from a well-watered surface independent of crop type, crop development, and management practice. 
+3SIMG_L3C_INS_DLY || INSAT-3S derived INSOLATION
+3SIMG_L3B_UTH_WKL || Weekly UTH product from INSAT3S
+3SIMG_L3B_UTH_DLY || Daily UTH from INSAT-3S
+3SIMG_L3B_SST_WKL || Weekly SST product from INSAT3S
+3SIMG_L3B_SST_DLY || Daily SST from INSAT-3S
+3SIMG_L3B_OLR_WKL || Weekly OLR product from INSAT3S
+3SIMG_L3B_OLR_DLY || Daily OLR from INSAT-3S
+3SIMG_L3B_HEM_WKL || Weekly HEM product from INSAT3S
+3SIMG_L3B_HEM_DLY || Daily HEM  from INSAT-3S
+3SIMG_L2P_WVW || Water vapour derived wind vectors
+3SIMG_L2P_VSW || Winds derived using Visible band data of IMAGER
+3SIMG_L2P_SMK || This is an Active Smoke product which shows that the pixel is to be qualified as smoke.Inputs to the algorithm will include geo-referenced, corrected  Albedo, Digital counts for Visible channel and geo-referenced Brightness temperature for MIR,TIR1, TIR2. 
+3SIMG_L2P_MRW || Winds derived using MIR band data of IMAGER
+3SIMG_L2P_IRW || INSAT-3S Infrared channel derived Wind
+3SIMG_L2P_FIR || This is an Active FIRE product which shows that the pixel is warm enough to be qualified as fire. This is derived using MIR (T3) and TIR1 (T5) channel BT from INSAT-3S imager. 
+3SIMG_L2G_WDP || Wind Derived Product, Upper level divergence, lower level convergence, wind shear, mid-level wind shear, 24 hour wind shear tendency, vorticity(200,500,700,850mb) using INSAT-3S AMVs.
+3SIMG_L2G_IMR || Indian Multi Spectral rainfall from IMAGER
+3SIMG_L2G_GPI || Rainfall from INSAT-3S Imager channels is derived based on two methodologies: (i) Rainfall Estimation by GOES Precipitation Index (GPI) (ii) INSAT Multispectral Rainfall Algorithm . 
+3SIMG_L2G_AOD || The AOD product provides the aerosol optical thickness, at 650 nm and 4 Km spatial resolution over both land and ocean surfaces with root mean square (RMS) error of Â±0.1.
+3SIMG_L2C_INS || INSAT-3S derived INSOLATION
+3SIMG_L2C_FOG || Night time FOG is derived from TIR-1 and MIR channel brightness temperature over Indian region. However, for day time visible channel reflectance and TIR-1 channel brightness temperature has been used. The algorithm involves detection of different thresholds following an image based approach to detect FOG
+3SIMG_L2C_SNW || Snow cover derived from IMAGER
+3SIMG_L2C_CMP || Day-time cloud microphysical parameters from visible and SWIR channels of INSAT-3S imager
+3SIMG_L2B_SST || Sea surface temperature is derived from split thermal window channels (TIR1, TIR2) during daytime and using additional mid IR window channel (MIR) during night time over cloud free oceanic regions. The most important part of the SST retrieval from IR observations is the atmospheric correction, especially over tropics. This correction is determined through a suitable characterization of tropical atmospheres in radiative transfer model to simulate the brightness temperatures of INSAT-3S channels a
+3SIMG_L2B_OLR || Total outgoing longwave radiation (OLR) flux, thermally emitted from earth atmosphere system, is estimated by applying regression equation relating OLR flux with INSAT-3S Imager observed WV (6.7 Âµm) and thermal infrared (TIR-1 10.5 Âµm and TIR-2 11.5 Âµm) radiances. The coefficients of the regression equations are determined from results of the Radiative Transfer Model simulation with various atmospheric conditions
+3SIMG_L2B_LST || Land surface temperature (LST) is a key parameter in the land surface processes. LST is very useful input to various models related to agrometeorology, ecology, hydrology and climate.
+3SIMG_L2B_IMC || INSAT multispectral Rainfall Algorithm Technique (IMSRA) is one of the main operational rainfall retrieval algorithms for INSAT-3S. This algorithm estimates precipitation based on non-linear power law relationship established between infrared (IR) brightness temperatures (Tbs, 10.7 Âµm observations) and TRMM-PR surface rain rate.  Based on a number of case studies and research works carried out, a further refinement of the algorithm was made. 
+3SIMG_L2B_HEM || This product is derived on the basis of Hydro-Estimator method. It measures precipitation over Indian Region encompassing area between longitudes 30Â°E -to130Â°E and latitudes 50Â°N- 50Â°S.
+3SIMG_L2B_CTP || Cloud top properties derived using INSAT3S IMAGER
+3SIMG_L2B_CMK || INSAT-3S VHRR measures radiances in one visible and one SWIR band at 1 km spatial resolution, one MIR and two TIR bands at 4 km resolution, and one WV band at 8 km resolution. Radiances from 3 IR spectral bands TIR-1 , TIR-2 and MIR which are of same resolution of 4km are used in the INSAT cloud mask algorithm to estimate whether a given view of the earth surface is unobstructed by clouds
+3SIMG_L1C_ASIA_MER || IMAGER- 6 channel Level1 data in Mercator projection for Asian Sector
+3SIMG_L1C_SGP || Level1 IMAGER 6 channel  data of TIR1, TIR2, WV, VIS, SWIR, MIR Bands in Mercator projection
+3SIMG_L2B_UTH || Upper Tropospheric Humidity from IMAGER
+3SIMG_L1B_STD || Level1 data for Imager 6 channels at half hour interval
+E06OCM_L3C_LAC_AD || Daily Aerosol Optical Depth over Land
+E06OCM_L4_AC || The Analyzed Chlorophyll products are generated by combining OCM-3 derived chlorophyll observations with coupled physical-biogeochemical model simulation of chlorophyll using particle filter based assimilation technique. The model utilized is MOM5, coupled with biogeochemical model TOPAZ.
+MHS Level-3 || Gridded level3 Brightness temperature,specific humidity and integrated water vapoure derived using Microwave Humidity Sounder on board Microsat-2B 
+E06SCT_L4_UI || Upwelling index over indian ocean
+E06SCT_L4_AWV6HOURLY || Analyzed Winds are computed using Particle Filter Technique
+MHS L2 || Geotagged level-2 specific humidity profile(20 layers),Average column integrated Water vapour(3 layers) derived using Microwave Humidity Sounder on board Microsat-2B
+MHS L1 || Geotagged level-1 Brightness temperature product derived using Microwave Humidity Sounder on board Microsat-2B
+E06SCT_L4_BT_SP || EOS-06 Scatterometer high resolution land product over South Pole generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_GAM_SP || EOS-06 Scatterometer high resolution land product over South Pole generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_SIG_SP || EOS-06 Scatterometer high resolution land product over South Pole generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_GAM_NP || EOS-06 Scatterometer high resolution land product over North Pole generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_BT_NP || EOS-06 Scatterometer high resolution land product over North Pole generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_SIG_NP || EOS-06 Scatterometer high resolution land product over North Pole generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_BT_GLB || EOS-06 Scatterometer high resolution land product over Full Globe generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_SIG_GLB || EOS-06 Scatterometer high resolution land product over Full Globe generated using multiple L1B products using SIR Algorithm
+E06SCT_L4_BT_IND || EOS-06 Scatterometer high resolution land product over India generated using multiple L1B products using SIR Algorithm for HHASC, HHDES, HHBTH, VVASC, VVDES, VVBTH
+E06SCT_L4_GAM_IND || EOS-06 Scatterometer high resolution land product over India generated using multiple L1B products using SIR Algorithm for HHASC, HHDES, HHBTH, VVASC, VVDES, VVBTH
+E06SCT_L4_SIG_IND || EOS-06 Scatterometer high resolution land product over India generated using multiple L1B products using SIR Algorithm for HHASC, HHDES, HHBTH, VVASC, VVDES, VVBTH
+E06SCT_L4_AWV25 || Analyzed Winds are computed using optimal interpolation. The wind derived products and fluxes are computed based on COREv3.0 bulk algorithms.
+E06SCT_L3_SIG25_VV || EOS-06 Scatterometer L3 Product contains flagged sigma0s in global grid
+E06SCT_L3_SIG12_VV || EOS-06 Scatterometer L3 Product contains flagged sigma0s in global grid
+E06SCT_L3_SIG25_HH || EOS-06 Scatterometer L3 Product contains flagged sigma0s in global grid
+E06SCT_L3_SIG12_HH || EOS-06 Scatterometer L3 Product contains flagged sigma0s in global grid
+E06SCT_L3_WW25 || EOS-06 Scatterometer L3 Product contains flagged wind vectors in global grid
+E06SCT_L3_WW12 || EOS-06 Scatterometer L3 Product contains flagged wind vectors in global grid
+E06SCT_L2B_WV25 || EOS-06 Scatterometer L2B Product contains flagged wind vectors in swath grid
+E06SCT_L2B_WV12 || EOS-06 Scatterometer L2B Product contains flagged wind vectors in swath grid
+E06SCT_L2A_SIG25 || EOS-06 Scatterometer L2A Product contains flagged sigma0s in swath grid
+E06SCT_L2A_SIG12 || EOS-06 Scatterometer L2A Product contains flagged sigma0s in swath grid
+E06SCT_L1B_SIG || EOS-06 Scatterometer L1B Product contains time-ordered Earth-located sigma0s
+RSSHR_L2B_STD || DWR Data for SHAR
+RSCHR_L2B_STD || DWR Data for Cheerapunji
+3DIMG_L3G_IMR_WKL || Weekly IMR product from INSAT3D
+3DIMG_L3G_GPI_WKL || Weekly GPI product from INSAT3D
+3DIMG_L3B_UTH_WKL || Weekly UTH product from INSAT3D
+3DIMG_L3B_HEM_WKL || Weekly HEM product from INSAT3D
+3DIMG_L3B_OLR_WKL || Weekly OLR product from INSAT3D
+3DIMG_L3B_SST_WKL || Weekly SST product from INSAT3D
+SRLOPR_F || Near Real Time- Reduced level2 product generated after every 100 minutes
+SRLOPN_F || Near Real Time- Native product generated after every 100 minutes
+SRLGPN_F || Fully validated offline Native product
+SRLGPR_F || Fully validated offline Reduced product
+SRLGPS_F || Fully validated offline Sensor product
+SRLIPN_F || Interim Geo physical data record, Native product
+SRLIPR_F || Interim Geo physical data record, Reduced product
+SRLIPS_F || Interim Geo physical data record, Sensor product
+S1SCT_L4_AWV625 || Analyzed Winds are computed using optimal interpolation. The wind derived products and fluxes are computed based on COREv3.0 bulk algorithms.
+3RIMG_L2P_WV_MERGED || This product is amerged wind product using the algorithm for retrieving Atmospheric Motion Vectors (AMVs) from INSAT-3D and INSAT-3DR in staggering mode
+3RIMG_L2P_IRW_MERGED || this porduct is a merged wind product using the algorithm for retrieving Atmospheric Motion Vectors (AMVs) from INSAT-3D and INSAT-3DR in staggering mode
+3DIMG_L2P_WV_MERGED || This product is merged water vapour wind product using the algorithm for retrieving Atmospheric Motion Vectors (AMVs) from INSAT-3D and INSAT-3DR in staggering mode
+3DIMG_L2P_IRW_MERGED || Product is a merged wind product derived using the algorithm for retrieving Atmospheric Motion Vectors (AMVs) from INSAT-3D and INSAT-3DR in staggering mode
+3RIMG_L2B_CTP || Cloud top properties derived using INSAT3R IMAGER
+3DIMG_L2B_CTP || Cloud top properties derived using INSAT3D IMAGER
+S1SCT_L4_BT625_GLB || SCATSAT-1 high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT_L4_BT_SP || SCATSAT1 high resolution land product over South Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT_L4_GAM_SP || SCATSAT1 high resolution land product over South Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT_L4_SIG_SP || SCATSAT1 high resolution land product over South Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT_L4_GAM_NP || SCATSAT1 high resolution land product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT_L4_BT_NP || SCATSAT1 high resolution land product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT_L4_SIG_NP || SCATSAT1 high resolution land product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT_L4_BT_GLB || SCATSAT-1 high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT_L4_GAM_GLB || SCATSAT-1 high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT_L4_SIG_GLB || SCATSAT-1 high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT_L4_BT_IND || SCATSAT-1 high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm for HHASC, HHDES, HHBTH, VVASC, VVDES, VVBTH
+S1SCT_L4_GAM_IND || SCATSAT-1 high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm for HHASC, HHDES, HHBTH, VVASC, VVDES, VVBTH
+S1SCT_L4_SIG_IND || SCATSAT-1 high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm for HHASC, HHDES, HHBTH, VVASC, VVDES, VVBTH
+3DIMG_L2C_DST || Dust Product from Imager
+S1SCT_L3_BT25 || Scatterometer L3 Product contains Brightness Temperature in global grid
+S1SCT_L4_UI || Upwelling index over indian ocean
+3RSND_L2B_SA2 || Sounder Level2 data for A2 sector
+3RSND_L1B_SA2 || Sounder Level1 data for A2 sector
+3RIMG_L3C_INS_DLY || INSAT-3DR derived INSOLATION
+3DIMG_L3C_INS_DLY || INSAT-3D derived INSOLATION
+S1SCT_L3_IC || Sea Ice cover
+S1SCT-BTL4-HHBOTH-GLB || SCATSAT-1 HH BOTH high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHBOTH-GLB || SCATSAT-1 HH BOTH high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVBOTH-GLB || SCATSAT-1 VV BOTH high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVBOTH-GLB || SCATSAT-1 VV BOTH high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-HHASC-GLB || SCATSAT-1 HH ASC high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHASC-GLB || SCATSAT-1 HH ASC high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVASC-GLB || SCATSAT-1 VV ASC high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVASC-GLB || SCATSAT-1 VV ASC high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-HHDES-GLB || SCATSAT-1 HH DES high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHDES-GLB || SCATSAT-1 HH DES high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVDES-GLB || SCATSAT-1 VV DES high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVDES-GLB || SCATSAT-1 VV DES high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+3RIMG_L3B_OLR_WKL || Weekly OLR from INSAT-3DR
+3RIMG_L3B_HEM_WKL || Weekly HEM from INSAT-
+3RIMG_L3G_GPI_WKL || Weekly GPI from INSAT-3DR
+3RIMG_L3G_IMR_WKL || Weekly IMR from INSAT-3DR
+3RIMG_L3B_UTH_WKL || Weekly UTH from INSAT-3DR
+3RIMG_L3B_SST_WKL || Weekly SST from INSAT-3DR
+3RIMG_L2G_WDP || Wind Derived Product, Upper level divergence, lower level convergence, wind shear, mid-level wind shear, 24 hour wind shear tendency, vorticity(200,500,700,850mb) using INSAT-3DR AMVs.
+INSAT3A-VHR-DAILYSST || Sea Surface Temperature derived from INSAT-3A IR channel data
+INSAT3A-VHR-DAILYUTH || Upper Tropospheric Humidity derived from INSAT-3A IR Channel data
+K1-VHR-DAILYIMR || INSAT Multi Chanel Rain; Rainfall estimate derived using Indian Multi-Spectral Rainfall algorithm (IMSRA)
+KALPANA1-VHRR-DAILYUTH || Upper Tropospheric Humidity derived from IR Channel data
+3DIMG_L3C_PET_DLY || Evapotranspiration (ET) is one of the important processes in the terrestrial water cycle. About 65% of rainwater is lost to the atmosphere due to the combined processes of evaporation and transpiration. In a given climate, reference evapotranspiration (ET0) is defined as the maximum evaporative demand of the atmosphere from a well-watered surface independent of crop type, crop development, and management practice. 
+3DIMG_L2G_WDP || Wind Derived Product, Upper level divergence, lower level convergence, wind shear, mid-level wind shear, 24 hour wind shear tendency, vorticity(200,500,700,850mb) using INSAT-3D AMVs.
+S1SCT-BTL4-VVBOTH-SP || SCATSAT1 VV BOTH high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-GAML4-VVBOTH-SP || SCATSAT1 VV BOTH high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-BTL4-HHBOTH-SP || SCATSAT1 HH BOTH high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-GAML4-HHBOTH-SP || SCATSAT1 HH BOTH high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-BTL4-HHASC-SP || SCATSAT1 HH ASC high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-GAML4-HHASC-SP || SCATSAT1 HH ASC high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-BTL4-VVASC-SP || SCATSAT1 VV ASC high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+
+S1SCT-GAML4-VVASC-SP || SCATSAT1 VV ASC high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+
+S1SCT-BTL4-HHBOTH-NP || SCATSAT1 HH DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVBOTH-NP || SCATSAT1 HH DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-BTL4-HHDES-NP || SCATSAT1 VV DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVDES-NP || SCATSAT1 VV DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHBOTH-NP || SCATSAT1 HH BOTH high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVBOTH-NP || SCATSAT1 VV BOTH high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHDES-NP || SCATSAT1 HH DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-GAMGL4-VVDES-NP || SCATSAT1 VV DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-BTL4-HHBOTH-IND || SCATSAT-1 HH BOTH high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-HHASC-IND || SCATSAT-1 HH ASC high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-HHDES-IND || SCATSAT-1 HH DES high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVBOTH-IND || SCATSAT-1 VV BOTH high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVASC-IND || SCATSAT-1 VV ASC high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-BTL4-VVDES-IND || SCATSAT-1 VV DES high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHBOTH-IND || SCATSAT-1 HH BOTH high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHASC-IND || SCATSAT-1 HH ASC high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-HHDES-IND || SCATSAT-1 HH DES high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVBOTH-IND || SCATSAT-1 VV BOTH high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVASC-IND || SCATSAT-1 VV ASC high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-GAML4-VVDES-IND || SCATSAT-1 VV DES high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHBOTH-GLB || SCATSAT-1 HH BOTH high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVBOTH-GLB || SCATSAT-1 VV BOTH high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHASC-GLB || SCATSAT-1 HH ASC high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVASC-GLB || SCATSAT-1 VV ASC high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHDES-GLB || SCATSAT-1 HH DES high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVDES-GLB || SCATSAT-1 VV DES high resolution land product over Full Globe generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT_L4_HWV || This product is generated making use of Backscatter data L1B from SCATSAT-1
+S1SCT_L4_AWV25 || Analyzed Winds are computed using optimal interpolation. The wind derived products and fluxes are computed based on COREv3.0 bulk algorithms.
+S1SCT-SIGL350-VV || Scatterometer L3s Product contains flagged sigma0s in global grid
+S1SCT-SIGL325-VV || Scatterometer L3s Product contains flagged sigma0s in global grid
+S1SCT-SIGL350-HH || Scatterometer L3s Product contains flagged sigma0s in global grid
+S1SCT-SIGL325-HH || Scatterometer L3s Product contains flagged sigma0s in global grid
+S1SCT-WWL350 || Scatterometer L3w Product contains flagged wind vectors in global grid
+S1SCT-WWL325 || Scatterometer L3w Product contains flagged wind vectors in global grid
+S1SCT-SIGL2B50 || Scatterometer L2B Product contains flagged wind vectors in swath grid
+S1SCT-SIGL2B25 || Scatterometer L2B Product contains flagged wind vectors in swath grid
+S1SCT-SIGL2A50 || Scatterometer L2A Product contains flagged sigma0s in swath grid
+S1SCT-SIGL2A25 || Scatterometer L2A Product contains flagged sigma0s in swath grid
+S1SCT-SIGL1B || Scatterometer L1B Product contains time-ordered Earth-located sigma0s
+S1SCT-SIGL4-VVBOTH-SP || SCATSAT1 VV BOTH high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-SIGL4-HHBOTH-SP || SCATSAT1 HH BOTH high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-SIGL4-HHASC-SP || SCATSAT1 HH ASC high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+S1SCT-SIGL4-VVASC-NP || SCATSAT1 VV ASC high resolution sea ice product over Sorth Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm.
+
+S1SCT-SIGL4-VVBOTH-NP || SCATSAT1 VV BOTH high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHBOTH-NP || SCATSAT1 HH BOTH high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHDES-NP || SCATSAT1 HH DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVDES-NP || SCATSAT1 VV DES high resolution sea ice product over North Pole generated using multiple SCATSAT1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHBOTH-IND || SCATSAT-1 HH BOTH high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHASC-IND || SCATSAT-1 HH ASC high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-HHDES-IND || SCATSAT-1 HH DES high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVBOTH-IND || SCATSAT-1 VV BOTH high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVASC-IND || SCATSAT-1 VV ASC high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+S1SCT-SIGL4-VVDES-IND || SCATSAT-1 VV DES high resolution land product over India generated using multiple SCATSAT-1 L1B products using SIR Algorithm
+3RIMG_L2B_IMC || INSAT multispectral Rainfall Algorithm Technique (IMSRA) is one of the main operational rainfall retrieval algorithms for INSAT-3DR. This algorithm estimates precipitation based on non-linear power law relationship established between infrared (IR) brightness temperatures (Tbs, 10.7 µm observations) and TRMM-PR surface rain rate.  Based on a number of case studies and research works carried out, a further refinement of the algorithm was made. 
+3RIMG_L2C_CMP || Day-time cloud microphysical parameters from visible and SWIR channels of INSAT-3DR imager
+3RIMG_L3G_GPI_DLY || Daily GPI from INSAT-3DR
+3RIMG_L3B_HEM_DLY || Daily HEM  from INSAT-3DR
+3RIMG_L2C_INS || INSAT-3DR derived INSOLATION
+3RIMG_L2B_LST || Land surface temperature (LST) is a key parameter in the land surface processes. LST is very useful input to various models related to agrometeorology, ecology, hydrology and climate.
+3RIMG_L3B_SST_DLY || Daily SST from INSAT-3DR
+3RIMG_L3G_IMR_DLY || Daily IMR Rain  from INSAT-3DR
+3RIMG_L3B_UTH_DLY || Daily UTH from INSAT-3DR
+3RIMG_L3B_OLR_DLY || Daily OLR from INSAT-3DR
+3RIMG_L2P_SMK || This is an Active Smoke product which shows that the pixel is to be qualified as smoke.Inputs to the algorithm will include geo-referenced, corrected  Albedo, Digital counts for Visible channel and geo-referenced Brightness temperature for MIR,TIR1, TIR2. 
+3RIMG_L2P_FIR || This is an Active FIRE product which shows that the pixel is warm enough to be qualified as fire. This is derived using MIR (T3) and TIR1 (T5) channel BT from INSAT-3DR imager. 
+3RIMG_L2C_SNW || Snow cover derived from IMAGER
+3RIMG_L2B_SST || Sea surface temperature is derived from split thermal window channels (TIR1, TIR2) during daytime and using additional mid IR window channel (MIR) during night time over cloud free oceanic regions. The most important part of the SST retrieval from IR observations is the atmospheric correction, especially over tropics. This correction is determined through a suitable characterization of tropical atmospheres in radiative transfer model to simulate the brightness temperatures of INSAT-3DR channels a
+3RIMG_L2B_HEM || This product is derived on the basis of Hydro-Estimator method. It measures precipitation over Indian Region encompassing area between longitudes 30°E -to130°E and latitudes 50°N- 50°S.
+3RIMG_L2C_FOG || Night time FOG is derived from TIR-1 and MIR channel brightness temperature over Indian region. However, for day time visible channel reflectance and TIR-1 channel brightness temperature has been used. The algorithm involves detection of different thresholds following an image based approach to detect FOG
+3RSND_L2B_SB1 || Sounder Level2 data for B1 sector
+3RSND_L2B_SA1 || Sounder Level2 data for A1 sector
+3RSND_L1B_SB1 || Sounder Level1 data for B1 sector
+3RSND_L1B_SA1 || Sounder Level1 data for A1 sector
+3RIMG_L2P_MRW || Winds derived using MIR band data of IMAGER
+3RIMG_L2P_VSW || Winds derived using Visible band data of IMAGER
+3RIMG_L2P_WVW || Water vapour derived wind vectors
+3RIMG_L2P_IRW || INSAT-3DR Infrared channel derived Wind
+3RIMG_L2G_AOD || The AOD product provides the aerosol optical thickness, at 650 nm and 4 Km spatial resolution over both land and ocean surfaces with root mean square (RMS) error of Â±0.1.
+3RIMG_L2B_CMK || INSAT-3DR VHRR measures radiances in one visible and one SWIR band at 1 km spatial resolution, one MIR and two TIR bands at 4 km resolution, and one WV band at 8 km resolution. Radiances from 3 IR spectral bands TIR-1 , TIR-2 and MIR which are of same resolution of 4km are used in the INSAT cloud mask algorithm to estimate whether a given view of the earth surface is unobstructed by clouds
+3RIMG_L2G_GPI || Rainfall from INSAT-3DR Imager channels is derived based on two methodologies: (i) Rainfall Estimation by GOES Precipitation Index (GPI) (ii) INSAT Multispectral Rainfall Algorithm . 
+3RIMG_L1C_ASIA_MER || IMAGER- 6 channel Level1 data in Mercator projection for Asian Sector
+3RIMG_L2B_OLR || Total outgoing longwave radiation (OLR) flux, thermally emitted from earth atmosphere system, is estimated by applying regression equation relating OLR flux with INSAT-3DR Imager observed WV (6.7 Âµm) and thermal infrared (TIR-1 10.5 Âµm and TIR-2 11.5 Âµm) radiances. The coefficients of the regression equations are determined from results of the Radiative Transfer Model simulation with various atmospheric conditions
+3RIMG_L2G_IMR || Indian Multi Spectral rainfall from IMAGER
+3RIMG_L2B_UTH || Upper Tropospheric Humidity from IMAGER
+3RIMG_L1C_SGP || Level1 IMAGER 6 channel  data of TIR1, TIR2, WV, VIS, SWIR, MIR Bands in Mercator projection
+3RIMG_L1B_STD || Level1 data for Imager 6 channels at half hour interval
+rosa_atm_prf_igs_l2 || This igu file is in NetCDF format and contains neutral atmospheric profiles of geo physical parameters such as Refractivity, Dry temperature, Temperature, Pressure and Water vapour pressure as well as latitude and longitude profiles at observed geometric heights of ray perigee point.It is processed with a latency of around 2 weeks.
+3DIMG_L2B_IMC || INSAT multispectral Rainfall Algorithm Technique (IMSRA) is one of the main operational rainfall retrieval algorithms for INSAT-3D. This algorithm estimates precipitation based on non-linear power law relationship established between infrared (IR) brightness temperatures (Tbs, 10.7 µm observations) and TRMM-PR surface rain rate.  Based on a number of case studies and research works carried out, a further refinement of the algorithm was made. 
+3DIMG_L2C_CMP || Day-time cloud microphysical parameters from visible and SWIR channels of INSAT-3D imager
+SAPHIR RR Product || Rain Rate has been retrieved from SAPHIR channels using a probabilistic rain identification algorithm and RT simulations supported retrieval algorithm
+3DIMG_L3G_GPI_DLY || Daily GPI from INSAT-3D
+3DIMG_L3B_HEM_DLY || Daily HEM  from INSAT-3D
+3DIMG_L2C_INS || INSAT-3D derived INSOLATION
+3DIMG_L2B_LST || Land surface temperature (LST) is a key parameter in the land surface processes. LST is very useful input to various models related to agrometeorology, ecology, hydrology and climate.
+3DIMG_L3B_SST_DLY || Daily SST from INSAT-3D
+3DIMG_L3G_IMR_DLY || Daily IMR Rain  from INSAT-3D
+3DIMG_L3B_UTH_DLY || Daily UTH from INSAT-3D
+3DIMG_L3B_OLR_DLY || Daily OLR from INSAT-3D
+3DIMG_L2P_SMK || This is an Active Smoke product which shows that the pixel is to be qualified as smoke.Inputs to the algorithm will include geo-referenced, corrected  Albedo, Digital counts for Visible channel and geo-referenced Brightness temperature for MIR,TIR1, TIR2. 
+3DIMG_L2P_FIR || This is an Active FIRE product which shows that the pixel is warm enough to be qualified as fire. This is derived using MIR (T3) and TIR1 (T5) channel BT from INSAT-3D imager. 
+3DIMG_L2C_SNW || Snow cover derived from IMAGER
+3DIMG_L2B_SST || Sea surface temperature is derived from split thermal window channels (TIR1, TIR2) during daytime and using additional mid IR window channel (MIR) during night time over cloud free oceanic regions. The most important part of the SST retrieval from IR observations is the atmospheric correction, especially over tropics. This correction is determined through a suitable characterization of tropical atmospheres in radiative transfer model to simulate the brightness temperatures of INSAT-3D channels a
+3DIMG_L2B_HEM || This product is derived on the basis of Hydro-Estimator method. It measures precipitation over Indian Region encompassing area between longitudes 30°E -to130°E and latitudes 50°N- 50°S.
+3DIMG_L2C_FOG || Night time FOG is derived from TIR-1 and MIR channel brightness temperature over Indian region. However, for day time visible channel reflectance and TIR-1 channel brightness temperature has been used. The algorithm involves detection of different thresholds following an image based approach to detect FOG
+3DSND_L2B_SB1 || Sounder Level2 data for B1 sector
+3DSND_L2B_SA2 || Sounder Level2 data for A2 sector
+3DSND_L2B_SA1 || Sounder Level2 data for A1 sector
+3DSND_L1B_SB1 || Sounder Level1 data for B1 sector
+3DSND_L1B_SA2 || Sounder Level1 data for A2 sector
+3DSND_L1B_SA1 || Sounder Level1 data for A1 sector
+3DIMG_L2P_MRW || Winds derived using MIR band data of IMAGER
+3DIMG_L2P_VSW || Winds derived using Visible band data of IMAGER
+3DSND_L2B_PFL || INSAT-3D carries an 18-channel infrared Sounder (plus a visible channel). The algorithm is designed for retrieving vertical profiles of atmospheric temperature and moisture along with total column ozone content in the atmosphere from clear sky infrared radiances in different absorption bands observed through INSAT-3D. Sounder derived profiles include temperature at 40 vertical pressure levels from surface to about 70 km and water vapor in 21 levels from surface to around 15 km.
+3DIMG_L2P_WVW || Water vapour derived wind vectors
+3DIMG_L2P_IRW || INSAT-3D Infrared channel derived Wind
+3DIMG_L2G_AOD || The AOD product provides the aerosol optical thickness, at 650 nm and 4 Km spatial resolution over both land and ocean surfaces with root mean square (RMS) error of ±0.1.
+3DIMG_L2B_CMK || INSAT-3D VHRR measures radiances in one visible and one SWIR band at 1 km spatial resolution, one MIR and two TIR bands at 4 km resolution, and one WV band at 8 km resolution. Radiances from 3 IR spectral bands TIR-1 , TIR-2 and MIR which are of same resolution of 4km are used in the INSAT cloud mask algorithm to estimate whether a given view of the earth surface is unobstructed by clouds
+3DIMG_L2G_GPI || Rainfall from INSAT-3D Imager channels is derived based on two methodologies: (i) Rainfall Estimation by GOES Precipitation Index (GPI) (ii) INSAT Multispectral Rainfall Algorithm . 
+3DIMG_L2B_FOG || FOG
+3DIMG_L1C_ASIA_MER || IMAGER- 6 channel Level1 data in Mercator projection for Asian Sector
+3DIMG_L2B_OLR || Total outgoing longwave radiation (OLR) flux, thermally emitted from earth atmosphere system, is estimated by applying regression equation relating OLR flux with INSAT-3D Imager observed WV (6.7 µm) and thermal infrared (TIR-1 10.5 µm and TIR-2 11.5 µm) radiances. The coefficients of the regression equations are determined from results of the Radiative Transfer Model simulation with various atmospheric conditions
+3DIMG_L2G_SST || Sea surface temperature is derived from split thermal window channels (TIR1, TIR2) during daytime and using additional mid IR window channel (MIR) during night time over cloud free oceanic regions. The most important part of the SST retrieval from IR observations is the atmospheric correction, especially over tropics. This correction is determined through a suitable characterization of tropical atmospheres in radiative transfer model to simulate the brightness temperatures of INSAT-3D channels and then generating the regression coefficients for SST retrieval.
+3DIMG_L2G_IMR || Indian Multi Spectral rainfall from IMAGER
+3DIMG_L2B_UTH || Upper Tropospheric Humidity from IMAGER
+3DSND_L1B_STD || Level1 data for SOUNDER 19 Channels 
+3DIMG_L1C_SGP || Level1 IMAGER 6 channel  data of TIR1, TIR2, WV, VIS, SWIR, MIR Bands in Mercator projection
+3DIMG_L1B_STD || Level1 data for Imager 6 channels at half hour interval
+SRLIPS || Interim Geo physical data record, Sensor product
+SRLIPR || Interim Geo physical data record, Reduced product
+SRLIPN || Interim Geo physical data record, Native product
+SRLGPS || Fully validated offline Sensor product
+SRLGPR || Fully validated offline Reduced product
+SRLGPN || Fully validated offline Native product
+SRLOPN || Near Real Time- Native product generated after every 100 minutes
+SRLOPR || Near Real Time- Reduced level2 product generated after every 100 minutes
+K1-VHR-HEM || KALPANA derived rainfall using Hydro Estimator Method
+K1-VHR-AMV-VIS || Atmospheric Motion Vectors derived using Visible Water vapour and IR bands of Kalpana 1 VHRR data
+ROSA level2 igs-Neutral atmospheric profile of geophysical parameters including dry parameters. || This igu file is in NetCDF format and contains neutral atmospheric profiles of geo physical parameters such as Refractivity, Dry temperature, Temperature, Pressure and Water vapour pressure as well as latitude and longitude profiles at observed geometric heights of ray perigee point.It is processed with a latency of around 2 weeks.
+ROSA Level1 igs profile-  Excess phase, Bending angle, Refractivity Profile || ROSA Level-1 igs products which provide the profiles of 
+(i) the behaviour of the 
+excess phase with respect to time of an occulting event; 
+(ii) the behaviour of the bending angle with respect to impact parameter of all 
+occulting events;  
+(iii) the behaviour of the refractivity with respect to the height
+ROSA Level1 igs profile-  Excess phase, Bending angle, Refractivity Profile || ROSA Level-1 igs products which provide the profiles of (i) the behaviour of the excess phase with respect to time of an occulting event; (ii) the behaviour of the bending angle with respect to impact parameter of all occulting events;  (iii) the behaviour of the refractivity with respect to the height
+ROSA level2 igr-Neutral atmospheric profile of geophysical parameters including dry parameters. || This igr file is in NetCDF format and contains neutral atmospheric profiles of geo physical parameters such as Refractivity, Dry temperature, Temperature, Pressure and Water vapour pressure as well as latitude and longitude profiles at observed geometric heights of ray perigee point.It is processed with a latency of 2-3 days.
+ROSA Level1 igr profile-  Excess phase, Bending angle, Refractivity Profile || ROSA Level-1 igr  products which are  processed with a latency of 2 days and it provide the profiles of 
+(i) the behaviour of the 
+excess phase with respect to time of an occulting event; 
+(ii) the behaviour of the bending angle with respect to impact parameter of all 
+occulting events;  
+(iii) the behaviour of the refractivity with respect to the height
+ROSA Level1 igr profile-  Excess phase, Bending angle, Refractivity Profile || ROSA Level-1 igr  products which are  processed with a latency of 2 days and it provide the profiles of (i) the behaviour of the excess phase with respect to time of an occulting event; (ii) the behaviour of the bending angle with respect to impact parameter of all occulting events;  (iii) the behaviour of the refractivity with respect to the height
+ROSA level2 igu-Neutral atmospheric profile of geophysical parameters including dry parameters. || This igu file is in NetCDF format and contains neutral atmospheric profiles of geo physical parameters such as Refractivity, Dry temperature, Temperature, Pressure and Water vapour pressure as well as latitude and longitude profiles at observed geometric heights of ray perigee point.It is processed in real time.
+ROSA Level1 igu profile-  Excess phase, Bending angle, Refractivity Profile || ROSA Level-1 igu products which are processed in real time and it provide the profiles of 
+(i) the behaviour of the 
+excess phase with respect to time of an occulting event; 
+(ii) the behaviour of the bending angle with respect to impact parameter of all 
+occulting events;  
+(iii) the behaviour of the refractivity with respect to the height
+ROSA Level1 igu profile-  Excess phase, Bending angle, Refractivity Profile || ROSA Level-1 igu products which are processed in real time and it provide the profiles of (i) the behaviour of the excess phase with respect to time of an occulting event; (ii) the behaviour of the bending angle with respect to impact parameter of all occulting events;  (iii) the behaviour of the refractivity with respect to the height
+Madras RR Product || Rain Rate (mm/hr) retrieved from MADRAS, high and low frequency (89, 23.5 , 19 GHz) channels using emission and scattering charateristics of atmospheric and oceanic variables.
+SAPHIR L1B || Brightness temperature Product at S1, S2, S3, S4, S5 and S6 Channel.  
+SAPHIR L1A3 || Brightness temperature Product at S1, S2, S3, S4, S5 and S6 Channel. 
+ 
+SAPHIR L1A2 || Brightness temperature Product at S1, S2, S3, S4, S5 and S6 Channel.  
+SAPHIR L1A || Brightness temperature Product at S1, S2, S3, S4, S5 and S6 Channel.  
+MADRAS L1B || Radiance Values for infrared, solar, synthetic_LW, total and Visible channels
+MADRAS L1A2 || Radiance Values for infrared, solar, synthetic_LW, total and Visible channels
+MADRAS L1A || Brightness Temperature Product at 18/23/36 , 89 AND 157 GHz
+Saphir GP Product || Layer average relative humidity (%) for 6 layers are derived using 6 channels of SAPHIR.
+Scarab GP Product || This product gives reflected flux at top of atmosphere in Watts/mt.sq and earth emitted long wave flux at TOA in Watts/mt.sq
+Madras GP Product || Surface wind speed (m/s), total precipitable water (g/cm sq.) and cloud liquid water (mg/cm sq.) content over oceans are derived using 18.7, 23.8 and 36.5 GHz channels.Rain flags are generated using 89 GHz.
+SCARAB L1B || Radiance Values for infrared, solar, synthetic_LW, total and Visible channels
+SCARAB L1A3 || Radiance Values for infrared, solar, synthetic_LW, total and Visible channels
+SCARAB L1A2 || Radiance Values for infrared, solar, synthetic_LW, total and Visible channels
+SCARAB L1A || Radiance Values for infrared, solar, synthetic_LW, total and Visible channels
+O2-SCT-DAILYAWV50 || Daily Analyzed Wind Vectors are generated from Level2B data of OSCAT and ASCAT
+O2-SCT-AWV50 || 12 Hourly Analyzed Wind Vectors are generated by combining Level2B(swath) data from both OSCAT and ASCAT
+O2-SCT-HWV || This product is generated making use of Backscatter data at composite slice level as available in L2A product of OSCAT and L2B wind vector product from OSCAT presently at 50km wind vector cells. Wind directions at composite slice location are interpolated utilizing neighbouring cells while wind speed is recalculated using backscattering coefficient and the OSCAT specific GMF. The quality flag of L2B product is reproduced.
+K1-VHR-DAILYINS || Kalpana derived daily insulation product
+K1-VHR-INS || Kalpana derived insulation product
+K1-VHR-LST || This product is obtained through VHRR Sensor of KALPANA1 Satellite of ISRO and covers Indian region. This product is generated every 30 minutes. The data is available since 2009 onwards. The data is available in standard hdf5 format for registered and authorised users on MOSDAC. Details are available on www.mosdac.gov.in
+This product is a level-2 retrieved Land Surface Temperature parameter derived Kalpana VHRR data.
+KALPANA1-VHRR-SGP-WVWV || Water vapor winds derived using Level1 SGP product of KALPANA
+K1-VHR-L03-CMV || Cloud Motion Vector derived using Level1 SGP product of Kalpana
+K1-VHR-IMR || INSAT Multi Chanel Rain; Rainfall estimate derived using Indian Multi-Spectral Rainfall algorithm (IMSRA)
+K1-VHR-SGP || Kalpana VHRR derived Level1B all 3 bands data in Asia Mercator projection over one-third of globe used for deriving winds
+K1-VHR-CMK || Cloud mask derived using Kalpana-1 IR channel data at every Pixel resolution
+3A-CCD-GPS || Co-registered Level-1B data for all 3 bands of INSAT-3A/CCD sensor
+3A-CCD-AOD || Aerosol optical Depth over Ocean
+KALPANA1-VHRR-ALLBANDSINDIA || Level 1B Data (Indian Sector) for all 3 channels - Visible, Infrared and Water vapour for KALPANA satellite
+K1-VHR-BRT || Kalpana IR Brightness  Temperature
+KALPANA1-VHRR-DAILYQPE || Daily Accumulated Quantitative Precipitation Estimates based on GPI Algoritham derived using Kalpana IR channel data
+KALPANA1-VHRR-AMV || Cloud Motion Vector and Water Vapour Winds derived from Kalpana IR and WV channel data
+K1-VHR-BTW || Kalpana WV Brightness Temperature
+INSAT3A-VHR-DAILYQPE || Quantitative Precipitation Estimates based on GPI Algorithm derived using INSAT-3A IR Channel data
+INSAT3A-VHR-DAILYOLR || Daily (averaged over previous 24 hour) Outgoing Longwave Radiation Derived from INSAT-3A- both IR and WV channel
+INSAT3A-VHR-SST || Sea Surface Temperature derived from INSAT-3A IR channel data
+INSAT3A-VHR-UTH || Upper Tropospheric Humidity derived from INSAT-3A IR Channel data
+INSAT3A-VHR-QPE || Quantitative Precipitative Estimates based on GPI Alogorithm derived using INSAT-3A IR Channel Data
+INSAT3A-VHR-OLR || Outgoing Longwave Radiation derived from INSAT-3A IR Channel Data
+INSAT3A-VHR-ALLBANDSINDIA || Level-1B data(Indian Sector) for all 3 Channels- VIS, IR and WV for INSAT-3A satellite
+INSAT3A-VHR-ALLBANDS || For every acquisition of INSAT-3A VHRR data, currently every 3-hourly
+INSAT3A-CCD-COMPOSITE-NDV || 10 Day composite-normalised Difference Vegetation Index
+INSAT3A-CCD-NDV || Normalised Difference Vegetation Index
+INSAT3A-CCD-ALLBANDSINDIA || Level 1B Data Over Indian Sector for all 3 channels - VIS, NIR, SWIR
+INSAT3A-CCD-ALLBANDS || Level 1B data for all 3 Channels- VIS, NIR, SWIR Band
+KALPANA1-VHRR-ALLBANDS || Level 1B data- normal mode for all 3 channels - Visible,Infrared and Water vapour for Kalpana satellite
+KALPANA1-VHRR-WVWV || Water Vapour Winds derived from Kalpana WV chennal data
+KALPANA1-VHRR-CMV || Cloud Motion Vector derived from Kalpana IR channel data
+KALPANA1-VHRR-SST || Sea Surface Temperature derived from Kalpana IR channel data
+KALPANA1-VHRR-DAILYSST || Daily (averaged over previous 24 hr) Sea Surface Temperature derived from Kalpana IR channel data
+KALPANA1-VHRR-QPE || Quatitative Precipitation Estimates based on GPI Algoritham derived using Kalpana IR channel data
+KALPANA1-VHRR-UTH || Upper Tropospheric Humidity derived from IR Channel data
+KALPANA1-VHRR-OLR || Outgoing Longwave Radiation derieved from Kalpana - both IR and WV Channel data
+KALPANA1-VHRR-DAILYOLR || Daily (averaged over previous 24 hr) Outgoing Longwave Radiation derieved from Kalpana - both IR and WV Channel data

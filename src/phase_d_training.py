@@ -1,18 +1,8 @@
-"""Phase D — Model Training & Validation.
-
-Architecture:
-  - L2-regularized Logistic Regression (primary) with learned coefficients.
-  - Strict Event-Grouped Train (70%) / Validation (15%) / Test (15%) Holdout Split.
-  - Leave-One-Event-Out Cross-Validation (LOEO-CV) across all event folds.
-  - 4-Tier Operational Alert System (Normal, Developing, High Risk, Cloudburst Likely).
-  - Metrics: POD, FAR, CSI, PR-AUC.
-  - Outputs calibrated coefficients, optimal threshold, and training_report.md.
-"""
-
 import numpy as np
 import pandas as pd
-import warnings
 import sys
+import os
+import warnings
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
@@ -32,6 +22,7 @@ from sklearn.metrics import (
     confusion_matrix
 )
 from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 
 from src.config import (
     CLOUDBURST_EVENTS_CSV, TRAINING_REPORT_MD,
@@ -39,49 +30,161 @@ from src.config import (
     WEIGHT_WIDESPREAD_HEAVY_RAIN, WEIGHT_HEAVY_RAIN,
     WEIGHT_MODERATE_RAIN, WEIGHT_NORMAL,
     LOEO_EVENT_BUFFER_HOURS, L2_C_VALUES,
-    FEATURES_AWS, FEATURES_IWV, FEATURES_SAT,
-    POSITIVE_LABELS, HARD_NEGATIVE, DATA_RAW
+    FEATURES_AWS, FEATURES_IWV, FEATURES_SAT, FEATURES_STALENESS,
+    POSITIVE_LABELS, HARD_NEGATIVE, DATA_RAW, DATA_PROCESSED
 )
 
+# ─── Staleness & Dropout Simulator ─────────────────────────────────────────────
+
+def simulate_sensor_outage_blocks(df: pd.DataFrame, label_col: str, seed: int = 42) -> pd.DataFrame:
+    """
+    Inject block-structured synthetic dropouts to simulate real-world infra failures.
+    - AWS Rain (R): Empirical 46.5% missingness. Simulate contiguous ~4 hour blocks.
+    - UTH/HEM: Empirical 16.8% normal missing, 27.6% on storm days. Simulate ~3 hour blocks.
+    """
+    rng = np.random.RandomState(seed)
+    out = df.copy().reset_index(drop=True)
+    
+    stations = out["station_id"].unique()
+    is_positive = out[label_col].isin(POSITIVE_LABELS)
+    
+    for stn in stations:
+        mask = (out["station_id"] == stn)
+        stn_idx = np.where(mask)[0]
+        n_rows = len(stn_idx)
+        if n_rows == 0: continue
+        
+        # AWS R dropout (~46.5% target). Assume 1 hr rows -> blocks of 4.
+        aws_starts = rng.binomial(1, 0.116, size=n_rows).astype(bool)
+        aws_drop = np.zeros(n_rows, dtype=bool)
+        for i in np.where(aws_starts)[0]:
+            block_len = rng.poisson(4) + 1
+            aws_drop[i : i + block_len] = True
+            
+        out.loc[stn_idx[aws_drop], "rain_mm_hr"] = np.nan
+        if "rain_mm_day" in out.columns:
+            out.loc[stn_idx[aws_drop], "rain_mm_day"] = np.nan
+        
+        # UTH / HEM dropout (27.6% storm, 16.8% normal). Blocks of ~3.
+        pos_mask = is_positive.iloc[stn_idx].values
+        start_prob = np.where(pos_mask, 0.092, 0.056)
+        sat_starts = (rng.rand(n_rows) < start_prob)
+        sat_drop = np.zeros(n_rows, dtype=bool)
+        for i in np.where(sat_starts)[0]:
+            block_len = rng.poisson(3) + 1
+            sat_drop[i : i + block_len] = True
+            
+        if "uth_mean" in out.columns: out.loc[stn_idx[sat_drop], "uth_mean"] = np.nan
+        if "hem_mean" in out.columns: out.loc[stn_idx[sat_drop], "hem_mean"] = np.nan
+
+    return out
+
+def generate_staleness_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute `{channel}_staleness_s` (continuous) and `{channel}_valid` (binary) 
+    BEFORE imputation occurs, passing missingness explicitly to the model.
+    """
+    df = df.copy()
+    
+    for base_col, prefix in [("R", "R"), ("uth_mean", "uth"), ("hem_mean", "hem")]:
+        valid_col = f"{prefix}_valid"
+        stale_col = f"{prefix}_staleness_s"
+        
+        if base_col in df.columns:
+            if valid_col not in df.columns:
+                df[valid_col] = df[base_col].notna().astype(float)
+            else:
+                df[valid_col] = df[valid_col].fillna(0.0)
+                
+            # Time since last valid reading
+            valid_times = df["timestamp"].where(df[base_col].notna())
+            last_valid_time = valid_times.groupby(df["station_id"]).ffill()
+            
+            staleness = (df["timestamp"] - last_valid_time).dt.total_seconds()
+            df[stale_col] = staleness.fillna(86400.0)  # Default to 24h if never seen
+        else:
+            df[valid_col] = 0.0
+            df[stale_col] = 86400.0
+            
+    return df
 
 # ─── Feature Engineering ───────────────────────────────────────────────────────
 
-def build_feature_matrix(events_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, List[str]]:
+def build_feature_matrix(events_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame, List[str]]:
     """
-    Build X (feature matrix), y (binary label), weights, and event group IDs.
+    Build X (feature matrix), y (binary label), weights, and event group metadata.
     """
     df = events_df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-    if "rain_mm_day" in df.columns:
-        df["rain_mm_hr"] = df["rain_mm_day"]
-    df = df.dropna(subset=["timestamp", "rain_mm_hr", "final_label"])
 
-    # Feature columns available in the labeled dataset
-    df["R"]    = df["rain_mm_hr"]
     df = df.sort_values(["station_id", "timestamp"])
-    r_30_raw = df.groupby("station_id")["R"].transform(lambda s: s.rolling(2, min_periods=1).sum())
-    r_60_raw = df.groupby("station_id")["R"].transform(lambda s: s.rolling(2, min_periods=1).sum())
-    df["R_30"] = np.where(df["R"] > 0, r_30_raw, 0.0)
-    df["R_60"] = np.where(df["R"] > 0, r_60_raw, 0.0)
-    df["RI"]   = df.groupby("station_id")["R"].transform(lambda s: s.diff().fillna(0))
+    df = df.drop_duplicates(subset=["station_id", "timestamp"]).reset_index(drop=True)
+
+    def _rolling_features(grp: pd.DataFrame) -> pd.DataFrame:
+        g = grp.set_index("timestamp").sort_index()
+        rain = g["rain_mm_hr"].fillna(0.0)
+        elapsed_s  = g.index.to_series().diff().dt.total_seconds()
+        
+        if len(elapsed_s.dropna()) > 0:
+            assert (elapsed_s.dropna() > 0).all(), f"Timestamps are not strictly sequential for station {grp['station_id'].iloc[0]}"
+            
+        elapsed_s = elapsed_s.fillna(3600.0)
+        elapsed_hr = (elapsed_s.clip(lower=60.0) / 3600.0)
+        R    = rain / elapsed_hr
+        R_30 = rain.rolling(pd.Timedelta("30min"), closed="right", min_periods=1).sum()
+        R_60 = rain.rolling(pd.Timedelta("60min"), closed="right", min_periods=1).sum()
+        RI   = R.diff().fillna(0.0) / elapsed_hr
+
+        rain_3d = rain.rolling(pd.Timedelta("3D"), closed="left", min_periods=1).sum()
+        rain_7d = rain.rolling(pd.Timedelta("7D"), closed="left", min_periods=1).sum()
+
+        def _slope(x):
+            if len(x) < 2: return 0.0
+            t = np.arange(len(x), dtype=float)
+            return float(np.polyfit(t, x, 1)[0])
+        rain_trend_7d = rain.rolling(pd.Timedelta("7D"), closed="left", min_periods=2).apply(
+            _slope, raw=True
+        ).fillna(0.0)
+
+        g["R"]               = R.values
+        g["R_30"]            = R_30.values
+        g["R_60"]            = R_60.values
+        g["RI"]              = RI.values
+        g["rain_3day_accum"] = rain_3d.values
+        g["rain_7day_accum"] = rain_7d.values
+        g["rain_trend_7day"] = rain_trend_7d.values
+        return g.reset_index()
+
+    parts = [_rolling_features(grp) for _, grp in df.groupby("station_id", sort=False)]
+    df = pd.concat(parts, ignore_index=True)
+    df["rain_mm_hr"] = df["R"]
+
+    for col in ["doy", "month", "lat", "lon"]:
+        if col not in df.columns and col in events_df.columns:
+            df[col] = events_df[col].values
+
     if "L_score" in df.columns:
         df["spatial_contrast"] = df["R"] * df["L_score"].fillna(0.0)
     else:
         df["spatial_contrast"] = 0.0
 
-    # Optional satellite / IWV features
-    for col in FEATURES_IWV + FEATURES_SAT:
+    df = df.dropna(subset=["timestamp", "rain_mm_hr", "final_label"])
+
+    for col in FEATURES_SAT + FEATURES_IWV:
         if col not in df.columns:
             df[col] = np.nan
 
-    available = [f for f in (FEATURES_AWS + FEATURES_IWV + FEATURES_SAT)
-                 if f in df.columns and df[f].notna().mean() > 0.3]
+    label_col = "rain_label" if "rain_label" in df.columns else "final_label"
+    df = generate_staleness_features(df)
+    
+    available = [f for f in (FEATURES_AWS + FEATURES_IWV + FEATURES_SAT + FEATURES_STALENESS)
+                 if f in df.columns and df[f].notna().mean() > 0.05]
 
     X = df[available].copy()
-    X = X.fillna(X.median())
+    
+    if "uth_nearest_px_km" in X.columns:
+        X["uth_nearest_px_km"] = X["uth_nearest_px_km"].fillna(250.0)
 
-    # Binary labels: 6-tier explicit mapping (zero fall-through)
-    label_col = "rain_label" if "rain_label" in df.columns else "final_label"
     y = df[label_col].map({
         "CONFIRMED_CLOUDBURST":  1,
         "CANDIDATE_CLOUDBURST":  1,
@@ -91,18 +194,16 @@ def build_feature_matrix(events_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Seri
         "NORMAL":                0,
     }).fillna(0).astype(int)
 
-    # Sample weights: intentional gradient contribution per tier
     weight_map = {
-        "CONFIRMED_CLOUDBURST":  WEIGHT_CONFIRMED_CLOUDBURST,   # 1.0 (Full Positive)
-        "CANDIDATE_CLOUDBURST":  WEIGHT_CANDIDATE_CLOUDBURST,   # 0.5 (Soft Positive)
-        "WIDESPREAD_HEAVY_RAIN": WEIGHT_WIDESPREAD_HEAVY_RAIN,  # 1.0 (Critical Hard Negative)
-        "HEAVY_RAIN":            WEIGHT_HEAVY_RAIN,             # 0.3 (Medium-difficulty Negative)
-        "MODERATE_RAIN":         WEIGHT_MODERATE_RAIN,          # 0.1 (Light Negative)
-        "NORMAL":                WEIGHT_NORMAL,                 # 0.05 (Quiescent Background Negative)
+        "CONFIRMED_CLOUDBURST":  WEIGHT_CONFIRMED_CLOUDBURST,
+        "CANDIDATE_CLOUDBURST":  WEIGHT_CANDIDATE_CLOUDBURST,
+        "WIDESPREAD_HEAVY_RAIN": WEIGHT_WIDESPREAD_HEAVY_RAIN,
+        "HEAVY_RAIN":            WEIGHT_HEAVY_RAIN,
+        "MODERATE_RAIN":         WEIGHT_MODERATE_RAIN,
+        "NORMAL":                WEIGHT_NORMAL,
     }
     weights = df[label_col].map(weight_map).fillna(0.05)
 
-    # Fast event grouping
     event_groups = _assign_event_groups(df)
 
     print(f"Feature matrix: {X.shape[0]} samples × {X.shape[1]} features")
@@ -112,40 +213,180 @@ def build_feature_matrix(events_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Seri
     return X, y, weights, event_groups, available
 
 
-def _assign_event_groups(df: pd.DataFrame) -> pd.Series:
+def _assign_event_groups(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Event grouping by ISO calendar-week × region.
-
-    WHY: IMD daily gridded data produces one 'event date' per JJAS day that
-    has any positive cell, which gives ~1,700 unique timestamps — far too many
-    for LOEO-CV (each fold re-fits on 913K rows → hours of compute).
-
-    Grouping by (ISO week, region) collapses these into ~60-100 physically
-    meaningful storm-week clusters, each leaving out ~7 days of a specific
-    region at once. This is the correct granularity for a daily-resolution
-    gridded dataset.
+    Cluster positive events with a >=7 day gap.
+    Returns a DataFrame containing cluster_id, timestamp, and region_name
+    to support the 7-day universal boundary purge logic.
     """
     df = df.copy()
-
-    # Support both parquet (rain_label) and CSV (final_label) column names
     label_col = "rain_label" if "rain_label" in df.columns else "final_label"
-
-    # ISO week number (1-52) × year × region → cluster key
-    iso_week  = df["timestamp"].dt.isocalendar().week.astype(int)
-    iso_year  = df["timestamp"].dt.isocalendar().year.astype(int)
     region_id = df["region_name"].astype(str) if "region_name" in df.columns else "all"
+    
+    pos_mask = df[label_col].isin(POSITIVE_LABELS)
+    pos_df = df[pos_mask].copy()
+    
+    cluster_series = pd.Series(-1, index=df.index, dtype=int)
+    cluster_id_counter = 0
+    
+    # 1. Cluster positive events by 7-day gap
+    for region, group in pos_df.groupby(region_id):
+        group = group.sort_values("timestamp")
+        gap = group["timestamp"].diff() > pd.Timedelta("7 days")
+        block_id = gap.cumsum()
+        
+        for b_id, b_group in group.groupby(block_id):
+            cluster_id_counter += 1
+            cluster_series.loc[b_group.index] = cluster_id_counter
+            
+    meta_df = pd.DataFrame({
+        "cluster_id": cluster_series,
+        "timestamp": df["timestamp"],
+        "region_name": region_id,
+        "is_positive": pos_mask
+    }, index=df.index)
+    
+    print(f"  Event grouping: {cluster_id_counter} independent positive storm clusters (>7 day gap).")
+    return meta_df
 
-    cluster_key = iso_year.astype(str) + "_W" + iso_week.astype(str).str.zfill(2) + "_" + region_id
 
-    # Assign integer group IDs
-    unique_keys = cluster_key.unique()
-    key_to_id   = {k: i for i, k in enumerate(sorted(unique_keys))}
-    group_series = cluster_key.map(key_to_id)
+# ─── Event-Grouped Train / Validation / Test Holdout Split ────────────────────
 
-    print(f"  Event grouping: {len(unique_keys)} ISO-week×region clusters "
-          f"({cluster_key[df[label_col].isin(POSITIVE_LABELS)].nunique()} contain positives)")
+def greedy_split(cluster_sizes, train_frac=0.7, val_frac=0.15):
+    total_events = sum(s[1] for s in cluster_sizes)
+    target_train = int(total_events * train_frac)
+    target_val = int(total_events * val_frac)
+    target_test = total_events - target_train - target_val
+    
+    train_ids, val_ids, test_ids = [], [], []
+    curr_train, curr_val, curr_test = 0, 0, 0
+    sorted_clusters = sorted(cluster_sizes, key=lambda x: x[1], reverse=True)
+    
+    for cid, size in sorted_clusters:
+        def_train = target_train - curr_train
+        def_val = target_val - curr_val
+        def_test = target_test - curr_test
+        max_def = max(def_train, def_val, def_test)
+        if max_def == def_train:
+            train_ids.append(cid)
+            curr_train += size
+        elif max_def == def_val:
+            val_ids.append(cid)
+            curr_val += size
+        else:
+            test_ids.append(cid)
+            curr_test += size
+    return train_ids, val_ids, test_ids
 
-    return group_series.astype(int)
+
+def event_grouped_split(
+    X: pd.DataFrame,
+    y: pd.Series,
+    weights: pd.Series,
+    event_groups: pd.DataFrame,
+    train_frac: float = 0.70,
+    val_frac: float = 0.15,
+    random_state: int = 42
+) -> Tuple[Dict, Dict, Dict]:
+    """
+    Leak-proof train / validation / test split by storm event cluster.
+    Implements a strict 7-day universal purge buffer at every train/test boundary.
+    """
+    pos_clusters = event_groups[event_groups["is_positive"] == True]
+    cluster_counts = pos_clusters.groupby("cluster_id").size().to_dict()
+    
+    # 1. Distribute clusters via size-aware stratification
+    train_ids, val_ids, test_ids = greedy_split(list(cluster_counts.items()), train_frac, val_frac)
+    
+    # Map back to string sets for quick lookup
+    train_gids = set(train_ids)
+    val_gids   = set(val_ids)
+    test_gids  = set(test_ids)
+    
+    # 2. Provisional assignment of every row (positive and negative)
+    # We assign each row to the closest cluster in time within its region.
+    provisional_assignment = np.zeros(len(X), dtype=int)  # 0=train, 1=val, 2=test
+    
+    cluster_bounds = []
+    for cid in pos_clusters["cluster_id"].unique():
+        c_df = pos_clusters[pos_clusters["cluster_id"] == cid]
+        cluster_bounds.append({
+            "cluster_id": cid,
+            "region_name": c_df["region_name"].iloc[0],
+            "start": c_df["timestamp"].min(),
+            "end": c_df["timestamp"].max(),
+            "assign": 0 if cid in train_gids else (1 if cid in val_gids else 2)
+        })
+    c_bounds_df = pd.DataFrame(cluster_bounds)
+    
+    # Map all rows
+    for region, group in event_groups.groupby("region_name"):
+        r_clusters = c_bounds_df[c_bounds_df["region_name"] == region]
+        if len(r_clusters) == 0:
+            # No clusters in this region, assign arbitrarily to train
+            provisional_assignment[group.index] = 0
+            continue
+            
+        t_int = group["timestamp"].values.astype("datetime64[ns]").astype(np.int64)[:, None]
+        starts_int = r_clusters["start"].values.astype("datetime64[ns]").astype(np.int64)[None, :]
+        ends_int = r_clusters["end"].values.astype("datetime64[ns]").astype(np.int64)[None, :]
+        
+        d_start = np.maximum(0, starts_int - t_int)
+        d_end = np.maximum(0, t_int - ends_int)
+        dist = np.maximum(d_start, d_end)
+        
+        nearest_idx = np.argmin(dist, axis=1)
+        provisional_assignment[group.index] = r_clusters["assign"].values[nearest_idx]
+        
+    # 3. Universal 7-Day Boundary Purge
+    # Any row within 7 days of a positive event in a DIFFERENT bucket is dropped.
+    purge_mask = np.zeros(len(X), dtype=bool)
+    
+    for region, group in event_groups.groupby("region_name"):
+        r_clusters = c_bounds_df[c_bounds_df["region_name"] == region]
+        if len(r_clusters) == 0: continue
+        
+        t_int = group["timestamp"].values.astype("datetime64[ns]").astype(np.int64)
+        row_assignments = provisional_assignment[group.index]
+        
+        for target_assign in [0, 1, 2]:
+            opposing_clusters = r_clusters[r_clusters["assign"] != target_assign]
+            if len(opposing_clusters) == 0: continue
+            
+            starts_int = opposing_clusters["start"].values.astype("datetime64[ns]").astype(np.int64)[None, :]
+            ends_int = opposing_clusters["end"].values.astype("datetime64[ns]").astype(np.int64)[None, :]
+            
+            d_start = np.maximum(0, starts_int - t_int[:, None])
+            d_end = np.maximum(0, t_int[:, None] - ends_int)
+            dist_to_opposing = np.maximum(d_start, d_end).min(axis=1)
+            
+            # If distance < 7 days AND the row is in the target_assign bucket -> purge
+            # 7 days = 7 * 24 * 3600 * 10^9 nanoseconds
+            seven_days_ns = 7 * 24 * 3600 * 1000000000
+            
+            bad_rows = (row_assignments == target_assign) & (dist_to_opposing < seven_days_ns)
+            purge_mask[group.index[bad_rows]] = True
+
+    print(f"  Purge Buffer: Dropped {purge_mask.sum()} cross-boundary leaked rows.")
+    
+    train_mask = (provisional_assignment == 0) & (~purge_mask)
+    val_mask   = (provisional_assignment == 1) & (~purge_mask)
+    test_mask  = (provisional_assignment == 2) & (~purge_mask)
+
+    def _pack(mask):
+        return {
+            "X": X.values[mask],
+            "y": y.values[mask],
+            "w": weights.values[mask],
+            "count": int(mask.sum()),
+            "pos_count": int(y.values[mask].sum())
+        }
+
+    train_data = _pack(train_mask)
+    val_data   = _pack(val_mask)
+    test_data  = _pack(test_mask)
+
+    return train_data, val_data, test_data
 
 
 # ─── Metrics & Alert Classification ──────────────────────────────────────────
@@ -206,67 +447,6 @@ def classify_alert_tier(p_cb: float) -> Tuple[str, str]:
         return "NORMAL", "GREEN: Quiescent Baseline Conditions"
 
 
-# ─── Event-Grouped Train / Validation / Test Holdout Split ────────────────────
-
-def event_grouped_split(
-    X: pd.DataFrame,
-    y: pd.Series,
-    weights: pd.Series,
-    event_groups: pd.Series,
-    train_frac: float = 0.70,
-    val_frac: float = 0.15,
-    random_state: int = 42
-) -> Tuple[Dict, Dict, Dict]:
-    """
-    Leak-proof train / validation / test split by storm event cluster.
-    70% Train, 15% Validation, 15% Test.
-    Guarantees no storm event in Test appears in Train or Validation.
-    """
-    rng = np.random.RandomState(random_state)
-
-    # Positive event groups
-    pos_gids = np.unique(event_groups[y == 1])
-    rng.shuffle(pos_gids)
-
-    n_pos = len(pos_gids)
-    n_train_pos = int(n_pos * train_frac)
-    n_val_pos   = int(n_pos * val_frac)
-
-    train_gids = set(pos_gids[:n_train_pos])
-    val_gids   = set(pos_gids[n_train_pos : n_train_pos + n_val_pos])
-    test_gids  = set(pos_gids[n_train_pos + n_val_pos:])
-
-    # Normal background groups
-    norm_gids = np.unique(event_groups[y == 0])
-    rng.shuffle(norm_gids)
-    n_norm = len(norm_gids)
-    n_train_norm = int(n_norm * train_frac)
-    n_val_norm   = int(n_norm * val_frac)
-
-    train_gids.update(norm_gids[:n_train_norm])
-    val_gids.update(norm_gids[n_train_norm : n_train_norm + n_val_norm])
-    test_gids.update(norm_gids[n_train_norm + n_val_norm:])
-
-    g_arr = event_groups.values
-    train_mask = np.isin(g_arr, list(train_gids))
-    val_mask   = np.isin(g_arr, list(val_gids))
-    test_mask  = np.isin(g_arr, list(test_gids))
-
-    def _pack(mask, n_events):
-        return {
-            "X": X.values[mask],
-            "y": y.values[mask],
-            "w": weights.values[mask],
-            "count": int(mask.sum()),
-            "pos_count": int(y.values[mask].sum()),
-            "n_events": n_events
-        }
-
-    train_data = _pack(train_mask, len(train_gids))
-    val_data   = _pack(val_mask, len(val_gids))
-    test_data  = _pack(test_mask, len(test_gids))
-
-    return train_data, val_data, test_data
 
 
 # ─── Leave-One-Event-Out Cross-Validation (LOEO-CV) ───────────────────────────
@@ -276,7 +456,7 @@ LOEO_BG_RATIO    = 10   # Keep this many background rows per positive row in LOE
 
 
 def _subsample_for_loeo(X: pd.DataFrame, y: pd.Series,
-                        weights: pd.Series, event_groups: pd.Series,
+                        weights: pd.Series, event_groups: pd.DataFrame,
                         rng_seed: int = 42) -> tuple:
     """
     Subsample the majority (NORMAL/background) class for LOEO-CV only.
@@ -303,7 +483,7 @@ def _subsample_for_loeo(X: pd.DataFrame, y: pd.Series,
 
 def loeo_cross_validate(
     X: pd.DataFrame, y: pd.Series, weights: pd.Series,
-    event_groups: pd.Series, C: float = 1.0
+    event_groups: pd.DataFrame, C: float = 1.0
 ) -> Tuple[np.ndarray, np.ndarray, List[Dict]]:
     """
     LOEO-CV on a class-balanced subsample (keeps all positives + 10x background).
@@ -313,7 +493,7 @@ def loeo_cross_validate(
     Xs, ys, ws, gs = _subsample_for_loeo(X, y, weights, event_groups)
     print(f"  LOEO subsample: {len(Xs):,} rows ({int(ys.sum())} pos, {int((ys==0).sum())} neg)")
 
-    event_ids = gs[ys == 1].unique()
+    event_ids = gs["cluster_id"][ys == 1].unique()
     if len(event_ids) == 0:
         return np.array([]), np.array([]), []
 
@@ -327,7 +507,7 @@ def loeo_cross_validate(
     X_arr = Xs.values
     y_arr = ys.values
     w_arr = ws.values
-    g_arr = gs.values
+    g_arr = gs["cluster_id"].values
 
     for fold_idx, held_out_gid in enumerate(event_ids, 1):
         test_mask  = (g_arr == held_out_gid)

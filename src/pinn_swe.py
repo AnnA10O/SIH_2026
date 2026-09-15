@@ -100,10 +100,35 @@ class SwEMLP(nn.Module):
 class SharedSWEPINN:
     """
     Non-Dimensional Shared 2D SWE-PINN for Cloudburst & Thunderstorm Flooding.
+    Solves 2D Shallow Water Equations over real complex Himalayan topography (Mandakini / Kedarnath DEM).
     """
     def __init__(self, device: str = "cpu"):
         self.device = torch.device(device)
         self.model = SwEMLP(in_features=6, hidden_dim=32, num_layers=6).to(self.device)
+
+        # Load real high-resolution DEM from data/raw/dem if available
+        dem_path = ROOT / "data" / "raw" / "dem" / "rudraprayag_kedarnath_dem.npz"
+        self.elev_tensor = None
+        self.dzdx_tensor = None
+        self.dzdy_tensor = None
+        self.has_real_dem = False
+
+        if dem_path.exists():
+            try:
+                dem = np.load(dem_path)
+                elev = dem["elevation"].astype(np.float32)
+                z_min, z_max = float(np.nanmin(elev)), float(np.nanmax(elev))
+                elev_norm = (elev - z_min) / max(1.0, (z_max - z_min))
+                
+                self.elev_tensor = torch.from_numpy(elev_norm).unsqueeze(0).unsqueeze(0).to(self.device)
+                self.dzdx_tensor = torch.from_numpy(dem["dz_dx"].astype(np.float32) / 5.0).unsqueeze(0).unsqueeze(0).to(self.device)
+                self.dzdy_tensor = torch.from_numpy(dem["dz_dy"].astype(np.float32) / 5.0).unsqueeze(0).unsqueeze(0).to(self.device)
+                self.has_real_dem = True
+                self.z_min_meters = z_min
+                self.z_max_meters = z_max
+                print(f"[PINN SWE] Loaded real Mandakini/Kedarnath DEM: {z_min:.0f}m to {z_max:.0f}m a.s.l.")
+            except Exception as e:
+                print(f"[PINN SWE] DEM load error: {e}, falling back to analytical profile")
 
     # ── Non-Dimensional Rainfall Forcing ───────────────────────────────────────
     @staticmethod
@@ -116,14 +141,11 @@ class SharedSWEPINN:
         - Thunderstorm: 35 mm/hr peak, broad regional footprint (sigma=0.50 ~ 10 km), sustained pulse (peak at t=0.50).
         """
         if hazard_type == "cloudburst":
-            # 100 mm/hr = 0.10 m/hr -> over 3 hr = 0.30 m -> R_tilde_peak = 0.30 / 5.0 = 0.060
-            # Spatial concentration multiplier ~ 3.5 in core
             peak_r_nondim = 0.22
             sigma_s = 0.125      # 2.5 km / 20 km = 0.125
             t_peak = 0.30
             sigma_t = 0.15
         else:
-            # 35 mm/hr = 0.035 m/hr -> over 3 hr = 0.105 m -> R_tilde_peak = 0.105 / 5.0 = 0.021
             peak_r_nondim = 0.08
             sigma_s = 0.500      # 10 km / 20 km = 0.50
             t_peak = 0.50
@@ -136,20 +158,40 @@ class SharedSWEPINN:
         return peak_r_nondim * spatial_bell * temporal_bell
 
     # ── Non-Dimensional Valley Topography Profile ──────────────────────────────
-    @staticmethod
-    def compute_bed_profile(x_t: torch.Tensor, y_t: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def compute_bed_profile(self, x_t: torch.Tensor, y_t: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        V-shaped Himalayan valley profile:
-        z_tilde in [0, 1]. Longitudinal slope down in y direction.
+        Computes bed elevation z_tilde and terrain slopes dz_dx, dz_dy.
+        Samples from real DEM (Mandakini / Kedarnath basin) when available.
+        Falls back to analytical parabolic canyon if DEM is unavailable.
         """
-        center_x = 0.5
-        slope_y = -0.35   # Bed slopes down along valley axis
-        canyon_x = 0.80   # Parabolic canyon walls
+        if self.has_real_dem and self.elev_tensor is not None:
+            # Map normalized [0, 1] domain to grid_sample [-1, 1] coordinates
+            with torch.no_grad():
+                gx = torch.clamp(2.0 * x_t.detach() - 1.0, -1.0, 1.0)
+                gy = torch.clamp(2.0 * y_t.detach() - 1.0, -1.0, 1.0)
+                grid_coords = torch.cat([gx, gy], dim=1).unsqueeze(0).unsqueeze(2)  # (1, N, 1, 2)
 
-        z_tilde = 0.70 + slope_y * y_t + canyon_x * (x_t - center_x)**2
-        dz_dx = 2.0 * canyon_x * (x_t - center_x)
-        dz_dy = torch.full_like(y_t, slope_y)
-        return z_tilde, dz_dx, dz_dy
+                z_tilde = torch.nn.functional.grid_sample(
+                    self.elev_tensor, grid_coords, mode="bilinear", align_corners=True
+                ).view(x_t.shape[0], 1)
+
+                dz_dx = torch.nn.functional.grid_sample(
+                    self.dzdx_tensor, grid_coords, mode="bilinear", align_corners=True
+                ).view(x_t.shape[0], 1)
+
+                dz_dy = torch.nn.functional.grid_sample(
+                    self.dzdy_tensor, grid_coords, mode="bilinear", align_corners=True
+                ).view(x_t.shape[0], 1)
+
+            return z_tilde, dz_dx, dz_dy
+        else:
+            center_x = 0.5
+            slope_y = -0.35   # Bed slopes down along valley axis
+            canyon_x = 0.80   # Parabolic canyon walls
+            z_tilde = 0.70 + slope_y * y_t + canyon_x * (x_t - center_x)**2
+            dz_dx = 2.0 * canyon_x * (x_t - center_x)
+            dz_dy = torch.full_like(y_t, slope_y)
+            return z_tilde, dz_dx, dz_dy
 
     # ── Non-Dimensional PDE Residuals ──────────────────────────────────────────
     def compute_pde_residuals(self, x_t: torch.Tensor, y_t: torch.Tensor, t_t: torch.Tensor,
@@ -334,15 +376,21 @@ class SharedSWEPINN:
 
 
 if __name__ == "__main__":
-    pinn = SharedSWEPINN()
+    device_str = "cuda" if torch.cuda.is_available() else "cpu"
+    pinn = SharedSWEPINN(device=device_str)
 
-    # Train for Cloudburst profile
-    train_cb = pinn.train_pinn(epochs_adam=200, epochs_lbfgs=15, hazard_type="cloudburst")
-    print("Training Report (Cloudburst):", train_cb)
+    print("\n=== Recalibrating PINN SWE Solver on Real Mandakini DEM Topography ===")
+    train_cb = pinn.train_pinn(epochs_adam=250, epochs_lbfgs=20, hazard_type="cloudburst")
+    print("Training Report (Cloudburst on Real Topography):", train_cb)
+
+    # Save calibrated model weights
+    save_path = ROOT / "models" / "pinn_swe_dem_calibrated.pt"
+    torch.save(pinn.model.state_dict(), save_path)
+    print(f"[SAVED] Recalibrated PINN SWE checkpoint: {save_path.name}")
 
     # Forward simulation at peak inundation
     sim_cb = pinn.simulate_inundation(hazard_type="cloudburst", eval_time_hr=1.0)
-    print("\nSimulation Result (Cloudburst):")
+    print("\nSimulation Result (Cloudburst on Real Mandakini Gorge):")
     print(f"  Peak Water Depth : {sim_cb['peak_water_depth_m']} m")
     print(f"  Peak Velocity    : {sim_cb['peak_velocity_m_s']} m/s")
     print(f"  Flooded Area     : {sim_cb['flooded_area_km2']} km2")
@@ -350,6 +398,6 @@ if __name__ == "__main__":
 
     # Parameterized call for Thunderstorm profile
     sim_ts = pinn.simulate_inundation(hazard_type="thunderstorm", eval_time_hr=2.0)
-    print("\nSimulation Result (Thunderstorm):")
+    print("\nSimulation Result (Thunderstorm on Real Topography):")
     print(f"  Peak Water Depth : {sim_ts['peak_water_depth_m']} m")
     print(f"  Flooded Area     : {sim_ts['flooded_area_km2']} km2")

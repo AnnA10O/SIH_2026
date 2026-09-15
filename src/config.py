@@ -101,10 +101,58 @@ LOEO_EVENT_BUFFER_HOURS = 12            # hrs before/after peak to group into sa
 L2_C_VALUES = [0.001, 0.01, 0.1, 1.0, 10.0]
 
 # Feature columns (built from MOSDAC data; satellite cols added when available)
-FEATURES_AWS = ["R", "R_30", "R_60", "RI", "RH", "RH_trend", "dewpoint_depression"]
+# Feature columns (built from MOSDAC data; satellite cols added when available)
+FEATURES_AWS = [
+    # Layer 1: sub-daily intensity signals
+    "R", "R_30", "R_60", "RI",
+    # Layer 2a: antecedent moisture (soil saturation proxy)
+    "rain_3day_accum",   # 3-day prior rainfall (mm) — closed="left" excludes today
+    "rain_7day_accum",   # 7-day prior rainfall (mm)
+    "rain_trend_7day",   # linear slope of 7-day window (mm/day) — +ve = moistening
+    # Layer 2b: calendar + terrain (zero-cost, already in parquet)
+    "doy",               # day of year (monsoon phase: onset ~155, withdrawal ~270)
+    "month",             # integer month (coarser monsoon phase)
+    "lat",               # station latitude (terrain type proxy)
+    "lon",               # station longitude
+    "spatial_contrast",  # R × L_score (convective organisation proxy)
+]
 FEATURES_IWV = ["IWV_now", "IWV_trend_3hr"]
-FEATURES_SAT = ["CTT", "CTCR"]         # added when satellite data available
+# Satellite-derived daily features — produced by satellite_feature_engine.py
+# Only available for disaster windows with downloaded HDF5 data (2016, 2019, 2021)
+FEATURES_SAT = [
+    "ctt_mean",       # Mean cloud top temperature (K) — lower = deeper convection
+    "ctt_min",        # Minimum CTT (coldest cloud top) — peak convective intensity
+    "ctt_cold_frac",  # Fraction of pixels < 233 K (< -40°C) — deep convective area
+    "hem_mean",       # Mean satellite hydro-estimator rain rate (mm/hr)
+    "hem_max",        # Peak satellite rain rate in window (mm/hr)
+    "olr_mean",       # Mean outgoing longwave radiation (W/m²) — low OLR = deep cloud
+    "uth_mean",          # Mean upper troposphere humidity (%)
+    "uth_nearest_px_km", # Distance to closest valid UTH reading (anti-leak confound feature)
+    "uth_valid",         # Binary 0/1 MNAR mask for UTH missing values
+]
+
+# Explicit staleness features matching the DataFusionBuffer ChannelState
+FEATURES_STALENESS = [
+    "R_staleness_s", "R_valid",
+    "uth_staleness_s",
+    "hem_staleness_s", "hem_valid"
+]
+
 FEATURES_TERRAIN = ["elevation"]        # added when DEM available
+
+# ─── Disaster Event Windows ──────────────────────────────────────────────────────
+# Bounding boxes (lat_min, lat_max, lon_min, lon_max) used for spatial clipping
+# when extracting satellite features for each disaster event.
+DISASTER_WINDOWS = {
+    "Pithoragarh_Jul2016":  (28.5, 31.0, 79.5, 81.5),
+    "Chamoli_Jul2016":      (29.5, 31.5, 78.5, 80.5),
+    "Uttarkashi_Aug2019":   (30.0, 32.0, 77.5, 79.5),
+    "Chamoli_Oct2021":      (29.5, 31.5, 78.5, 80.5),
+    "Chamoli_Feb2021":      (29.5, 31.5, 78.5, 80.5),
+}
+
+# Satellite product directory (populated by MOSDAC downloader)
+SATELLITE_DIR = DATA_RAW / "satellite"
 
 # Label tiers (numeric for training)
 LABEL_MAP = {
