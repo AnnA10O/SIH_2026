@@ -97,7 +97,9 @@ class DataFusionBuffer:
         """The single source of truth both models must use."""
         policy = self._policy.get(channel)
         if policy is None:
-            raise KeyError(f"Unknown channel '{channel}'")
+            # Add fallback policy instead of crashing if queried before first ingest
+            self._policy[channel] = {"max_staleness_s": 2 * 3600, "degraded_staleness_s": 60 * 60, "liveness_timeout_s": 4 * 3600}
+            policy = self._policy[channel]
 
         with self._lock:
             reading = self._store.get(station_id, {}).get(channel)
