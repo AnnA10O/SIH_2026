@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
-import AlertBanner from "./components/AlertBanner";
 import RiskMap from "./components/RiskMap";
 import RiskPeakGraph from "./components/RiskPeakGraph";
 import WeatherDetailsCards from "./components/WeatherDetailsCards";
-import PublicAlertPreview from "./components/PublicAlertPreview";
+import AlertManager from "./components/AlertManager";
 import StationChat from "./components/StationChat";
 import AuthorityReportsPanel from "./components/AuthorityReportsPanel";
 import FeedbackModal from "./components/FeedbackModal";
@@ -25,6 +24,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("map");
   const [selectedLocation, setSelectedLocation] = useState(monitoringLocations[0]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
     // When switching tabs, fire a resize event so that canvases (like PINN 3D) 
@@ -78,8 +78,27 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-50 text-slate-800 flex overflow-hidden antialiased">
-      {/* Left Navigation Sidebar */}
+    <>
+      {/* LANDING PAGE OVERLAY */}
+      {showLanding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <iframe 
+            src="./landing.html" 
+            className="w-full h-full border-none absolute inset-0" 
+            title="Landing Page"
+          />
+          <button 
+            onClick={() => setShowLanding(false)}
+            className="absolute bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-full shadow-[0_0_20px_rgba(14,165,233,0.5)] transition-all hover:scale-105 active:scale-95 flex items-center space-x-2 z-10 font-sans tracking-wide uppercase"
+          >
+            <span>Enter System</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </div>
+      )}
+
+      <div className="h-screen w-screen bg-slate-50 text-slate-800 flex overflow-hidden antialiased">
+        {/* Left Navigation Sidebar */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -116,16 +135,8 @@ export default function App() {
 
         {/* TAB 3: ALERTS VIEW */}
         {activeTab === "alerts" && (
-          <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in duration-300">
-            <h2 className="text-xl font-bold text-slate-900">Active Emergency Weather Alerts</h2>
-            <AlertBanner
-              location={selectedLocation}
-              onSimulateBroadcast={handleTriggerBroadcastPreview}
-            />
-            <PublicAlertPreview
-              location={selectedLocation}
-              onTriggerBroadcast={handleTriggerBroadcastPreview}
-            />
+          <div className="p-4 sm:p-6 lg:p-8 h-full animate-in fade-in duration-300 flex flex-col">
+            <AlertManager location={selectedLocation} />
           </div>
         )}
 
@@ -168,6 +179,17 @@ export default function App() {
           </div>
         )}
 
+        {/* TAB 7: STATISTICAL ANALYTICS VIEW */}
+        {activeTab === "analytics" && (
+          <div className="h-full w-full animate-in fade-in duration-300 relative">
+             <iframe 
+               src="./weather_statistical_analytics.html" 
+               className="w-full h-full border-none absolute inset-0 bg-slate-50" 
+               title="Statistical Analytics"
+             />
+          </div>
+        )}
+
         {/* Fixed Collapsible Bottom Drawer: Model performance & validation */}
         <ValidationDrawer />
       </main>
@@ -180,5 +202,6 @@ export default function App() {
         currentLocationName={selectedLocation.name}
       />
     </div>
+    </>
   );
 }

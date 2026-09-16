@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Star,
   BarChart3,
+  Activity,
   ShieldCheck,
   Radio,
   CloudLightning,
@@ -28,6 +29,7 @@ export default function Sidebar({
 }) {
   const navItems = [
     { id: "map", label: "Risk Map", icon: Map },
+    { id: "analytics", label: "Analytics", icon: Activity },
     { id: "pinn", label: "PINN", icon: Brain, badge: "AI Physics", badgeColor: "bg-purple-600" },
     { id: "alerts", label: "Alerts", icon: Bell, badge: activeAlertCount, badgeColor: "bg-red-500" },
     { id: "chat", label: "Station Chat", icon: MessageSquare, badge: unreadMessageCount, badgeColor: "bg-sky-500" },

@@ -103,5 +103,171 @@
             "tier": "Orange",
             "risk_score": 82.5
         }
+    },
+    {
+        "id": "alert-1789566948",
+        "timestamp": "2026-09-16 19:25:48",
+        "region": "Test",
+        "tier": "Orange",
+        "risk_score": 85,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectionError)",
+        "raw_data": {
+            "region": "Test",
+            "tier": "Orange",
+            "risk_score": 85
+        }
+    },
+    {
+        "id": "alert-1789570788",
+        "timestamp": "2026-09-16 20:29:48",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectionError)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789570889",
+        "timestamp": "2026-09-16 20:31:29",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectionError)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789571086",
+        "timestamp": "2026-09-16 20:34:46",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectionError)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789571219",
+        "timestamp": "2026-09-16 20:36:59",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectionError)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789571240",
+        "timestamp": "2026-09-16 20:37:20",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectionError)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789571311",
+        "timestamp": "2026-09-16 20:38:31",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789571333",
+        "timestamp": "2026-09-16 20:38:53",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789572633",
+        "timestamp": "2026-09-16 21:00:33",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789572652",
+        "timestamp": "2026-09-16 21:00:52",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789588771",
+        "timestamp": "2026-09-17 01:29:31",
+        "region": "Mandakini Valley, Kedarnath",
+        "tier": "Red",
+        "risk_score": 0,
+        "precaution": "Immediate Evacuation Required. Flash flood/cloudburst imminent in this region. Move to higher ground immediately.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Mandakini Valley, Kedarnath",
+            "tier": "Red",
+            "risk_score": 0,
+            "message": "\u26a0\ufe0f WEATHER ALERT: Potential cloudburst/heavy rainfall risk in Mandakini Valley, Kedarnath during 15:30 \u2013 17:00 IST. Avoid low-lying areas, flooded roads, underpasses & water crossings. Stay indoors if severe weather develops. Follow local authority instructions. Risk: SEVERE."
+        }
     }
 ]
