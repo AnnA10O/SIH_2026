@@ -135,9 +135,9 @@ export default function App() {
 
         {/* TAB 3: ALERTS VIEW */}
         {activeTab === "alerts" && (
-          <div className="p-4 sm:p-6 lg:p-8 h-full animate-in fade-in duration-300 flex flex-col">
-            <AlertManager location={selectedLocation} />
-          </div>
+            <div className="p-4 sm:p-6 lg:p-8 h-full animate-in fade-in duration-300 flex flex-col">
+              <AlertManager locations={monitoringLocations} defaultLocation={selectedLocation} />
+            </div>
         )}
 
         {/* TAB 4: STATION CHAT VIEW */}

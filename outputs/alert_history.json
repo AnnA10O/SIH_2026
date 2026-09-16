@@ -269,5 +269,53 @@
             "risk_score": 0,
             "message": "\u26a0\ufe0f WEATHER ALERT: Potential cloudburst/heavy rainfall risk in Mandakini Valley, Kedarnath during 15:30 \u2013 17:00 IST. Avoid low-lying areas, flooded roads, underpasses & water crossings. Stay indoors if severe weather develops. Follow local authority instructions. Risk: SEVERE."
         }
+    },
+    {
+        "id": "alert-1789596235",
+        "timestamp": "2026-09-17 03:33:55",
+        "region": "Mandakini Valley, Kedarnath",
+        "tier": "Red",
+        "risk_score": 0,
+        "precaution": "Immediate Evacuation Required. Flash flood/cloudburst imminent in this region. Move to higher ground immediately.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Mandakini Valley, Kedarnath",
+            "tier": "Red",
+            "risk_score": 0,
+            "message": "\ud83d\udea8 IMMEDIATE WEATHER WARNING \u2013 MANDAKINI VALLEY, KEDARNATH\n\nYour area is at very high risk of an imminent Cloudburst in the coming 15:30 \u2013 17:00 IST.\n\nMove away from low-lying and flood-prone areas immediately. Do NOT cross flooded roads, str [VERIFIED MANUAL EDIT: Proceed with caution.]eams or underpasses. Stay in a safe elevated location and follow instructions from local authorities.\n\nRisk Level: \ud83d\udd34 VERY HIGH\nExpected: 15:30 \u2013 17:00 IST"
+        }
+    },
+    {
+        "id": "alert-1789598611",
+        "timestamp": "2026-09-17 04:13:31",
+        "region": "Mandakini Valley, Kedarnath",
+        "tier": "Red",
+        "risk_score": 0,
+        "precaution": "Immediate Evacuation Required. Flash flood/cloudburst imminent in this region. Move to higher ground immediately.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Mandakini Valley, Kedarnath",
+            "tier": "Red",
+            "risk_score": 0,
+            "message": "\ud83d\udea8 IMMEDIATE WEATHER WARNING \u2013 MANDAKINI VALLEY, KEDARNATH\n\nYour area is at very high risk of an imminent Cloudburst in the coming 15:30 \u2013 17:00 IST.\n\nMove away from low-lying and flood-prone areas immediately. Do NOT cross flooded roads, streams or underpasses. Stay in a safe elevated location and follow instructions from local authorities.\n\nRisk Level: \ud83d\udd34 VERY HIGH\nExpected: 15:30 \u2013 17:00 IST"
+        }
+    },
+    {
+        "id": "alert-1789598616",
+        "timestamp": "2026-09-17 04:13:36",
+        "region": "Alaknanda Valley, Badrinath",
+        "tier": "Orange",
+        "risk_score": 0,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Alaknanda Valley, Badrinath",
+            "tier": "Orange",
+            "risk_score": 0,
+            "message": "\ud83d\udea8 Proposed Citizen Alert \u2014 Extremely Heavy Rainfall Risk\n\n\u26a0\ufe0f WEATHER ALERT \u2013 HIGH EXTREMELY HEAVY RAINFALL RISK\nA potential extremely heavy rainfall has been detected for Alaknanda Valley, Badrinath during 16:45 \u2013 18:30 IST.\n\nPlease:\n\u2022 Avoid low-lying areas, river/stream crossings and underpasses.\n\u2022 Stay indoors and away from windows if severe weather develops.\n\u2022 Do not attempt to cross flooded roads or flowing water.\n\u2022 Follow instructions from local authorities.\n\nRisk Level: \ud83d\udd34 HIGH\nLocation: Alaknanda Valley, Badrinath\nExpected Window: 16:45 \u2013 18:30 IST\n\nThis is an early warning based on weather observations and predictive analysis. Stay alert for official updates."
+        }
     }
 ]
