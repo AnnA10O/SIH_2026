@@ -198,10 +198,29 @@ def run_downloader(mode: str = "events", dataset_id: str = "K1VHR_L2B_QPE", star
                     total_downloaded += 1
                 time.sleep(0.5)  # Respect server rate limits
 
-    print("\n" + "=" * 65)
-    print(f"Download complete: {total_downloaded} files processed.")
-    print(f"Location: {DOWNLOAD_BASE}")
-    print("=" * 65)
+def get_era_dataset_id(dataset_id: str, date_str: str) -> str:
+    """Dynamically select the product ID based on operational eras if a generic prefix is used."""
+    if not dataset_id.startswith("AUTO_"):
+        return dataset_id
+        
+    product = dataset_id.replace("AUTO_", "")
+    d = datetime.strptime(date_str, "%Y-%m-%d")
+    year = d.year
+    month = d.month
+    
+    if year < 2014:
+        if product == "HEM": return "K1VHR_L2B_HEM"
+        if product == "QPE": return "K1VHR_L2B_QPE"
+        return f"K1VHR_L2B_{product}"
+    elif year < 2016 or (year == 2016 and month <= 9):
+        if product == "HEM": return "3D_HEM"
+        if product == "QPE": return "3D_QPE"
+        return f"3D_{product}"
+    else:
+        if product == "HEM": return "3DR_HEM"
+        if product == "QPE": return "3DR_QPE"
+        return f"3DR_{product}"
+
 
 
 if __name__ == "__main__":

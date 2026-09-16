@@ -105,6 +105,7 @@ FEATURES_AWS = ["R", "R_30", "R_60", "RI", "RH", "RH_trend", "dewpoint_depressio
 FEATURES_IWV = ["IWV_now", "IWV_trend_3hr"]
 FEATURES_SAT = ["CTT", "CTCR"]         # added when satellite data available
 FEATURES_TERRAIN = ["elevation"]        # added when DEM available
+FEATURES_STALENESS = ["R_staleness_s", "R_valid", "uth_staleness_s", "uth_valid", "hem_staleness_s", "hem_valid"]
 
 # Label tiers (numeric for training)
 LABEL_MAP = {

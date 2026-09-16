@@ -1,0 +1,107 @@
+[
+    {
+        "id": "alert-1789556709",
+        "timestamp": "2026-09-16 16:35:09",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "192.168.1.100:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789557812",
+        "timestamp": "2026-09-16 16:53:32",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.110.194.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789558383",
+        "timestamp": "2026-09-16 17:03:03",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.110.194.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789558581",
+        "timestamp": "2026-09-16 17:06:21",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.110.194.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789559158",
+        "timestamp": "2026-09-16 17:15:58",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.110.194.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789559449",
+        "timestamp": "2026-09-16 17:20:49",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    },
+    {
+        "id": "alert-1789559462",
+        "timestamp": "2026-09-16 17:21:02",
+        "region": "Uttarkashi Basin",
+        "tier": "Orange",
+        "risk_score": 82.5,
+        "precaution": "Be Prepared. High probability of severe weather or flash flooding. Keep emergency kits ready and avoid low-lying areas.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Success",
+        "raw_data": {
+            "region": "Uttarkashi Basin",
+            "tier": "Orange",
+            "risk_score": 82.5
+        }
+    }
+]

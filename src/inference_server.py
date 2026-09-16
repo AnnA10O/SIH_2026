@@ -9,7 +9,7 @@ import os
 import sys
 import logging
 
-ROOT = Path("d:/SIH")
+ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = ROOT / "models"
 sys.path.insert(0, str(ROOT))
 

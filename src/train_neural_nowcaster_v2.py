@@ -25,7 +25,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, confusion_matrix
 
-ROOT = Path("d:/SIH")
+ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.phase_d_training import (

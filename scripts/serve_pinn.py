@@ -20,6 +20,7 @@ app.add_middleware(
 )
 
 JSON_PATH = Path(__file__).resolve().parent.parent / "outputs" / "pinn_3d_multi_region_FINAL.json"
+ALERTS_JSON_PATH = Path(__file__).resolve().parent.parent / "outputs" / "alert_history.json"
 
 
 def load_pinn_data():
@@ -76,6 +77,35 @@ def get_region_data(region_name: str):
         )
     return data[key]
 
+
+@app.get("/api/alerts/history")
+def get_alert_history():
+    """Returns the last 5 alerts from history."""
+    if not ALERTS_JSON_PATH.exists():
+        return []
+    try:
+        with open(ALERTS_JSON_PATH, "r") as f:
+            history = json.load(f)
+            # Return last 5 in reverse chronological order
+            return list(reversed(history[-5:]))
+    except Exception as e:
+        print(f"Error reading alert history: {e}")
+        return []
+
+@app.get("/api/alerts/current")
+def get_current_alert():
+    """Returns the most recent active alert."""
+    if not ALERTS_JSON_PATH.exists():
+        return None
+    try:
+        with open(ALERTS_JSON_PATH, "r") as f:
+            history = json.load(f)
+            if not history:
+                return None
+            return history[-1]
+    except Exception as e:
+        print(f"Error reading current alert: {e}")
+        return None
 
 if __name__ == "__main__":
     import uvicorn

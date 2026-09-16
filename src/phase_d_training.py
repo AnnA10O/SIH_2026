@@ -44,6 +44,58 @@ from src.config import (
 )
 
 
+# ─── Staleness & Dropout Simulator ─────────────────────────────────────────────
+
+def simulate_sensor_outage_blocks(df: pd.DataFrame, label_col: str, seed: int = 42) -> pd.DataFrame:
+    """
+    Inject block-structured synthetic dropouts to simulate real-world infra failures.
+    """
+    rng = np.random.RandomState(seed)
+    out = df.copy().reset_index(drop=True)
+    if "station_id" not in out.columns:
+        return out
+    stations = out["station_id"].unique()
+    
+    for stn in stations:
+        mask = (out["station_id"] == stn)
+        stn_idx = np.where(mask)[0]
+        n_rows = len(stn_idx)
+        if n_rows == 0: continue
+        
+        aws_starts = rng.binomial(1, 0.116, size=n_rows).astype(bool)
+        aws_drop = np.zeros(n_rows, dtype=bool)
+        for i in np.where(aws_starts)[0]:
+            block_len = rng.poisson(4) + 1
+            aws_drop[i : i + block_len] = True
+            
+        if "rain_mm_hr" in out.columns:
+            out.loc[stn_idx[aws_drop], "rain_mm_hr"] = np.nan
+        if "rain_mm_day" in out.columns:
+            out.loc[stn_idx[aws_drop], "rain_mm_day"] = np.nan
+    return out
+
+def compute_metrics(y_true, y_prob, threshold=0.5):
+    y_pred = (y_prob >= threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    pod = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    far = fp / (tp + fp) if (tp + fp) > 0 else 0.0
+    csi = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0.0
+    prec, rec, _ = precision_recall_curve(y_true, y_prob)
+    pr_auc = auc(rec, prec)
+    return {"POD": pod, "FAR": far, "CSI": csi, "PR_AUC": pr_auc, "TP": tp, "FP": fp, "TN": tn, "FN": fn}
+
+def find_optimal_threshold(y_true, y_prob):
+    prec, rec, thresholds = precision_recall_curve(y_true, y_prob)
+    best_opt = 0.5
+    best_csi = -1.0
+    for th in thresholds:
+        m = compute_metrics(y_true, y_prob, th)
+        if m["CSI"] > best_csi:
+            best_csi = m["CSI"]
+            best_opt = th
+    return best_opt
+
+
 # ─── Feature Engineering ───────────────────────────────────────────────────────
 
 def build_feature_matrix(events_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, List[str]]:

@@ -575,7 +575,7 @@ async function loadPINNRegion(regionKey) {
   renderTownsForRegion(normalizedKey);
   const townsEl = document.getElementById('pinn-towns-list');
   if (townsEl) {
-    const names = data.towns_affected.map(t => t.name).join(" &bull; ");
+    const names = (data.towns_affected || []).map(t => t.name).join(" &bull; ");
     townsEl.innerHTML = '<span style="color: var(--text-muted); font-weight:700;">AFFECTED TOWNS & INFRASTRUCTURE:</span> <span style="color: var(--text-main); font-weight:600;">' + names + '</span>';
   }
 
@@ -750,7 +750,7 @@ function updatePINNBottomPanel(data) {
   if (gorgeEl) gorgeEl.innerHTML = `<span style="color:var(--orange);">${data.choke_location}</span>`;
   
   if (townsEl) {
-    const names = data.towns_affected.map(t => t.name).join(" &bull; ");
+    const names = (data.towns_affected || []).map(t => t.name).join(" &bull; ");
     townsEl.innerHTML = `<span style="color: var(--text-muted); font-weight:700;">AFFECTED TOWNS & INFRASTRUCTURE:</span> <span style="color: #ef4444; font-weight:600;">${names}</span>`;
   }
 
@@ -786,7 +786,7 @@ function updatePINNConclusionPanel(state, risk = 0, data = null) {
       </ul>
     `;
   } else if (state === 'ALERT' && data) {
-    const towns = data.towns_affected.map(t => t.name).join(", ");
+    const towns = (data.towns_affected || []).map(t => t.name).join(", ");
     panel.innerHTML = `
       <div style="padding: 10px; background: rgba(239, 68, 68, 0.15); border-left: 3px solid var(--red); border-radius: 4px;">
         <div style="color: var(--red); font-weight: 800; font-size: 14px; margin-bottom: 4px;">🚨 CRITICAL FLOOD EVENT</div>

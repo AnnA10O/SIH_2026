@@ -465,6 +465,10 @@
       📊 MODULE 4: Accuracy &amp; Proof
       <span class="badge">88.8% Accuracy</span>
     </button>
+    <button class="tab-btn" onclick="switchTab('alerts', this)">
+      🚨 MODULE 5: Live Alerts
+      <span class="badge" id="alerts-badge">Standby</span>
+    </button>
   </nav>
 
   <!-- MAIN VIEWPORT -->
@@ -1109,6 +1113,57 @@ void snn_lif_update(float rain_rate, float iwv_drop) {
 
       </div>
 
+    </section>
+
+    <!-- ── TAB 5: LIVE ALERTS ─────────────────────────────── -->
+    <section id="tab-alerts" class="tab-pane">
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 800px; margin: 0 auto; overflow-y: auto; height: 100%;">
+        
+        <!-- Active Alert Card -->
+        <div class="card" id="active-alert-card" style="border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.05); transition: background-color 0.5s ease;">
+          <div class="card-header" style="justify-content: space-between;">
+            <span id="active-alert-title" style="color: var(--green); font-weight: 800; font-size: 14px;">🟢 NO ACTIVE THREATS</span>
+            <span id="active-alert-time" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-sub);">--:--</span>
+          </div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-top: 8px;" id="active-alert-region">
+            Routine Monitoring
+          </div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">
+            Risk Score: <span id="active-alert-risk" style="color: var(--text-main);">0.0%</span>
+          </div>
+          <div style="margin-top: 16px; font-size: 14px; line-height: 1.5; color: var(--text-main);" id="active-alert-precaution">
+            All clear. No immediate threats detected. Normal conditions.
+          </div>
+          
+          <!-- Receiver PC Status -->
+          <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; color: var(--text-muted);">📡 Network Push to Receiver PC:</span>
+            <span id="network-push-status" style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Standby</span>
+          </div>
+        </div>
+
+        <!-- Alert History -->
+        <div class="card">
+          <div class="card-header">📋 RECENT ALERT HISTORY</div>
+          <div class="table-container" style="margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Tier</th>
+                  <th>Region</th>
+                  <th>Network Status</th>
+                </tr>
+              </thead>
+              <tbody id="alert-history-tbody">
+                <tr>
+                  <td colspan="4" style="text-align: center; font-style: italic;">No alerts in history.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -1858,7 +1913,135 @@ void snn_lif_update(float rain_rate, float iwv_drop) {
       initMap();
       updateClock();
       populateRankingTable();
+      startAlertsPolling();
     });
+
+    // --- ALERTS POLLING LOGIC ---
+    function startAlertsPolling() {
+      fetchAlerts(); // initial fetch
+      setInterval(fetchAlerts, 5000);
+    }
+
+    async function fetchAlerts() {
+      try {
+        // Fetch Current Alert
+        const curRes = await fetch('http://localhost:8000/api/alerts/current');
+        if (curRes.ok) {
+          const curAlert = await curRes.json();
+          updateActiveAlertUI(curAlert);
+        }
+
+        // Fetch Alert History
+        const histRes = await fetch('http://localhost:8000/api/alerts/history');
+        if (histRes.ok) {
+          const history = await histRes.json();
+          updateAlertHistoryUI(history);
+        }
+      } catch (err) {
+        console.error("Failed to fetch alerts from backend", err);
+      }
+    }
+
+    function updateActiveAlertUI(alert) {
+      const card = document.getElementById('active-alert-card');
+      const title = document.getElementById('active-alert-title');
+      const time = document.getElementById('active-alert-time');
+      const region = document.getElementById('active-alert-region');
+      const risk = document.getElementById('active-alert-risk');
+      const precaution = document.getElementById('active-alert-precaution');
+      const netStatus = document.getElementById('network-push-status');
+      const badge = document.getElementById('alerts-badge');
+
+      if (!alert) {
+        // Default to Green/Clear
+        card.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+        card.style.background = 'rgba(34, 197, 94, 0.05)';
+        title.style.color = 'var(--green)';
+        title.innerText = '🟢 NO ACTIVE THREATS';
+        time.innerText = '--:--';
+        region.innerText = 'Routine Monitoring';
+        risk.innerText = '0.0%';
+        precaution.innerText = 'All clear. No immediate threats detected. Normal conditions.';
+        netStatus.innerText = 'Standby';
+        netStatus.style.color = 'var(--text-sub)';
+        badge.innerText = 'Normal';
+        badge.style.background = 'rgba(34, 197, 94, 0.2)';
+        badge.style.color = 'var(--green)';
+        return;
+      }
+
+      // Populate based on alert tier
+      time.innerText = alert.timestamp;
+      region.innerText = alert.region;
+      risk.innerText = alert.risk_score + '%';
+      precaution.innerText = alert.precaution;
+      
+      const statusText = alert.network_status || 'Unknown';
+      netStatus.innerText = \`Last sent to \${alert.network_target || 'Unknown'}: \${statusText}\`;
+      if (statusText === 'Success') {
+        netStatus.style.color = 'var(--green)';
+      } else {
+        netStatus.style.color = 'var(--red)';
+      }
+
+      let colorHex, colorVar, icon;
+      if (alert.tier === 'Red') {
+        colorHex = '239, 68, 68'; // #ef4444
+        colorVar = 'var(--red)';
+        icon = '🔴 EXTREME THREAT';
+      } else if (alert.tier === 'Orange') {
+        colorHex = '249, 115, 22'; // #f97316
+        colorVar = 'var(--orange)';
+        icon = '🟠 HIGH WARNING';
+      } else if (alert.tier === 'Yellow') {
+        colorHex = '234, 179, 8'; // #eab308
+        colorVar = 'var(--yellow)';
+        icon = '🟡 ELEVATED WATCH';
+      } else {
+        colorHex = '34, 197, 94'; // #22c55e
+        colorVar = 'var(--green)';
+        icon = '🟢 SAFE';
+      }
+
+      card.style.borderColor = \`rgba(\${colorHex}, 0.5)\`;
+      card.style.background = \`rgba(\${colorHex}, 0.1)\`;
+      title.style.color = colorVar;
+      title.innerText = icon;
+      
+      badge.innerText = alert.tier + ' Alert';
+      badge.style.background = \`rgba(\${colorHex}, 0.2)\`;
+      badge.style.color = colorVar;
+    }
+
+    function updateAlertHistoryUI(history) {
+      const tbody = document.getElementById('alert-history-tbody');
+      if (!history || history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; font-style: italic;">No alerts in history.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      history.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        let colorClass = '';
+        if (item.tier === 'Red') colorClass = 'style="color: var(--red); font-weight: 700;"';
+        else if (item.tier === 'Orange') colorClass = 'style="color: var(--orange); font-weight: 700;"';
+        else if (item.tier === 'Yellow') colorClass = 'style="color: var(--yellow); font-weight: 700;"';
+        else colorClass = 'style="color: var(--green); font-weight: 700;"';
+
+        let netStatusColor = item.network_status === 'Success' ? 'var(--green)' : 'var(--red)';
+
+        tr.innerHTML = \`
+          <td style="font-family: var(--font-mono); font-size: 10px;">\${item.timestamp}</td>
+          <td \${colorClass}>\${item.tier}</td>
+          <td>\${item.region}</td>
+          <td><span style="color: \${netStatusColor}">\${item.network_status || 'Unknown'}</span></td>
+        \`;
+        tbody.appendChild(tr);
+      });
+    }
+
   </script>
   <script src="js/pinn_canvas.js?v=9"></script>
   <script src="js/pinn_auto_trigger.js?v=9"></script>
