@@ -2,10 +2,64 @@
 @import "leaflet/dist/leaflet.css";
 
 @layer base {
+  :root {
+    --bg-page: #f8fafc; /* slate-50 */
+    --bg-panel: #ffffff; /* white */
+    --bg-panel-alt: #f1f5f9; /* slate-100 */
+    --border-subtle: #e2e8f0; /* slate-200 */
+    --border-strong: #cbd5e1; /* slate-300 */
+    --text-main: #0f172a; /* slate-900 */
+    --text-secondary: #475569; /* slate-600 */
+    --text-muted: #64748b; /* slate-500 */
+    --accent-blue: #0284c7; /* sky-600 */
+    
+    --status-critical: #dc2626; /* red-600 */
+    --status-warning: #ea580c; /* orange-600 */
+    --status-watch: #ca8a04; /* yellow-600 */
+    --status-normal: #16a34a; /* green-600 */
+    --status-info: #0284c7; /* sky-600 */
+  }
+
+  .dark {
+    --bg-page: #020617; /* slate-950 */
+    --bg-panel: #0f172a; /* slate-900 */
+    --bg-panel-alt: #1e293b; /* slate-800 */
+    --border-subtle: #1e293b; /* slate-800 */
+    --border-strong: #334155; /* slate-700 */
+    --text-main: #f8fafc; /* slate-50 */
+    --text-secondary: #cbd5e1; /* slate-300 */
+    --text-muted: #94a3b8; /* slate-400 */
+    --accent-blue: #38bdf8; /* sky-400 */
+
+    --status-critical: #ef4444; /* red-500 */
+    --status-warning: #f97316; /* orange-500 */
+    --status-watch: #eab308; /* yellow-500 */
+    --status-normal: #10b981; /* emerald-500 */
+    --status-info: #38bdf8; /* sky-400 */
+  }
+
   body {
     @apply bg-slate-50 text-slate-800 antialiased font-sans selection:bg-sky-500 selection:text-white;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
+}
+
+@theme {
+  --color-page: var(--bg-page);
+  --color-panel: var(--bg-panel);
+  --color-panel-alt: var(--bg-panel-alt);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-text-main: var(--text-main);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent-blue);
+  
+  --color-critical: var(--status-critical);
+  --color-warning: var(--status-warning);
+  --color-watch: var(--status-watch);
+  --color-normal: var(--status-normal);
+  --color-info: var(--status-info);
 }
 
 /* Custom Scrollbars */
