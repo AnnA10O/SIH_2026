@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Home,
   Map,
@@ -12,7 +12,9 @@ import {
   CloudLightning,
   MapPin,
   Menu,
-  X
+  X,
+  Terminal,
+  ShieldAlert
 } from "lucide-react";
 
 export default function Sidebar({
@@ -20,12 +22,43 @@ export default function Sidebar({
   setActiveTab,
   activeAlertCount = 1,
   unreadMessageCount = 2,
-  mobileMenuOpen,
-  setMobileMenuOpen,
+  mobileMenuOpen: propMobileMenuOpen,
+  setMobileMenuOpen: propSetMobileMenuOpen,
   locations = [],
   selectedLocation,
-  onSelectLocation
+  onSelectLocation,
+  simulateDisaster,
+  setSimulateDisaster
 }) {
+  const [internalMobileMenuOpen, setInternalMobileMenuOpen] = useState(false);
+  const mobileMenuOpen = propMobileMenuOpen !== undefined ? propMobileMenuOpen : internalMobileMenuOpen;
+  const setMobileMenuOpen = propSetMobileMenuOpen || setInternalMobileMenuOpen;
+
+  const [telemetry, setTelemetry] = useState({ imd: 'online', mosdac: 'online', logs: [] });
+  const terminalRef = useRef(null);
+
+  useEffect(() => {
+    const fetchTelemetry = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/telemetry");
+        if (res.ok) {
+          setTelemetry(await res.json());
+        }
+      } catch (err) {
+        console.error("Telemetry error", err);
+      }
+    };
+    fetchTelemetry();
+    const int = setInterval(fetchTelemetry, 3000);
+    return () => clearInterval(int);
+  }, []);
+
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [telemetry.logs]);
+
   const navItems = [
     { id: "map", label: "Risk Map", icon: Map },
     { id: "pinn", label: "PINN", icon: Brain, badge: "AI Physics", badgeColor: "bg-purple-600" },
@@ -99,6 +132,21 @@ export default function Sidebar({
             </div>
           )}
 
+          {/* Simulate Disaster Button */}
+          {setSimulateDisaster && (
+            <button
+              onClick={() => setSimulateDisaster(!simulateDisaster)}
+              className={`w-full mb-6 flex items-center justify-center space-x-2 px-4 py-2.5 text-xs font-bold rounded-xl shadow-xs transition-all ${
+                simulateDisaster 
+                  ? 'bg-red-600 text-white animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.7)] border border-red-500' 
+                  : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span>SIMULATE DISASTER</span>
+            </button>
+          )}
+
           <nav className="space-y-1.5 mb-auto">
             <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
               Navigation
@@ -141,22 +189,51 @@ export default function Sidebar({
 
           {/* System Telemetry & Quick Info Card */}
           <div className="mt-4 pt-4 border-t border-slate-100">
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 text-xs text-slate-600 space-y-2">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-600 space-y-3 shadow-inner">
               <div className="flex items-center justify-between font-semibold text-slate-700">
                 <span className="flex items-center space-x-1.5">
-                  <Radio className="w-4 h-4 text-sky-600" />
-                  <span>AI Telemetry</span>
+                  <Radio className="w-4 h-4 text-sky-600 animate-pulse" />
+                  <span>API Telemetry</span>
                 </span>
-                <span className="text-[10px] text-emerald-600 bg-emerald-100/80 px-1.5 py-0.5 rounded-md font-bold">
-                  94.2% ACC
+                <span className="text-[10px] text-emerald-600 bg-emerald-100/80 px-1.5 py-0.5 rounded-md font-bold border border-emerald-200">
+                  LIVE
                 </span>
               </div>
-              <p className="text-slate-500 leading-relaxed text-[11px]">
-                Processing Doppler Doppler & INSAT-3DR satellite vectors continuously.
-              </p>
-              <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
+              
+              <div className="flex justify-between items-center text-[10.5px]">
+                <div className="flex items-center space-x-1">
+                  <div className={`w-2 h-2 rounded-full ${telemetry.imd === 'online' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] animate-pulse'}`} />
+                  <span className="font-medium">IMD / O-Meteo</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className={`w-2 h-2 rounded-full ${telemetry.mosdac === 'online' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.6)]'}`} />
+                  <span className="font-medium">MOSDAC</span>
+                </div>
+              </div>
+
+              {/* Mini Terminal Viewer */}
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-2 overflow-hidden shadow-md">
+                <div className="flex items-center space-x-1 mb-1 opacity-70">
+                  <Terminal className="w-3 h-3 text-sky-400" />
+                  <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">inference.log</span>
+                </div>
+                <div 
+                  ref={terminalRef}
+                  className="font-mono text-[9px] text-emerald-400 h-24 overflow-y-auto leading-tight space-y-1 custom-scrollbar"
+                >
+                  {telemetry.logs.length > 0 ? telemetry.logs.map((log, idx) => (
+                    <div key={idx} className="break-all whitespace-pre-wrap opacity-90 hover:opacity-100 transition-opacity">
+                      {log.replace(/^\[.*?\]\s*/, '')}
+                    </div>
+                  )) : (
+                    <div className="text-slate-500 italic">Waiting for AI telemetry...</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-1 flex items-center justify-between text-[10px] text-slate-400 font-medium">
                 <span>Model: Keraunos v3.4</span>
-                <span className="text-sky-600 hover:underline cursor-pointer">Specs</span>
+                <span className="text-sky-600 hover:underline cursor-pointer">Re-sync</span>
               </div>
             </div>
           </div>

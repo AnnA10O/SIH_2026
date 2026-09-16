@@ -6,7 +6,9 @@ export default function Navbar({
   selectedLocation,
   onSelectLocation,
   mobileMenuOpen,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  simulateDisaster,
+  setSimulateDisaster
 }) {
   const [timeString, setTimeString] = useState("");
 
@@ -87,6 +89,18 @@ export default function Navbar({
               <span className="text-slate-700 font-semibold">{timeString || "15:02:44 IST"}</span>
               <span className="text-[11px] text-slate-400">Target Lead Time: 2–6 Hours</span>
             </div>
+            
+            <button
+              onClick={() => setSimulateDisaster(!simulateDisaster)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-full shadow-xs transition-all ${
+                simulateDisaster 
+                  ? 'bg-red-600 text-white animate-pulse shadow-[0_0_12px_rgba(220,38,38,0.7)] border border-red-500' 
+                  : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>SIMULATE DISASTER</span>
+            </button>
 
             <div className="flex items-center space-x-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-full shadow-xs">
               <span className="relative flex h-2 w-2">

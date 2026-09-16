@@ -139,10 +139,10 @@ def compute_features(hourly_rain: pd.Series,
     """
     feat = pd.DataFrame(index=hourly_rain.index)
     feat["R"]   = hourly_rain
-    feat["R_30"] = hourly_rain.rolling(2, min_periods=1).sum()    # 2 × 30-min = 1hr → use 2hr window
-    feat["R_60"] = hourly_rain.rolling(2, min_periods=1).sum()
+    feat["R_30"] = hourly_rain.rolling(2, min_periods=1, closed="left").sum()    # 2 × 30-min = 1hr → use 2hr window
+    feat["R_60"] = hourly_rain.rolling(2, min_periods=1, closed="left").sum()
     feat["R_30"] = hourly_rain.shift(0) + hourly_rain.shift(1).fillna(0)   # last 2 hrs
-    feat["R_60"] = hourly_rain.rolling(2, min_periods=1).sum()
+    feat["R_60"] = hourly_rain.rolling(2, min_periods=1, closed="left").sum()
     feat["RI"]   = hourly_rain.diff()   # Rain Intensity change rate (mm/hr per hr)
 
     if hourly_rh is not None:

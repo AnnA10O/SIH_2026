@@ -122,9 +122,9 @@ def _compute_intensity_features(station_df: pd.DataFrame) -> pd.DataFrame:
     # Instantaneous rain rate R (mm/hr)
     R = df["rain_mm"] / elapsed_hr
 
-    # Time-window accumulations — offset-string rolling requires monotonic DatetimeIndex
-    R_30 = df["rain_mm"].rolling("30min", closed="right").sum()
-    R_60 = df["rain_mm"].rolling("60min", closed="right").sum()
+    # Time-window accumulations — offset-string rolling        # Aggregations for temporal depth (strictly closed='left' to avoid current-hour leakage)
+    R_30 = df["rain_mm"].rolling("30min", closed="left").sum()
+    R_60 = df["rain_mm"].rolling("60min", closed="left").sum()
 
     # Rain acceleration RI = dR/dt  (mm/hr²)
     RI = R.diff().fillna(0.0) / elapsed_hr

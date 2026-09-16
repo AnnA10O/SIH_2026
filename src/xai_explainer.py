@@ -20,12 +20,7 @@ from pathlib import Path
 def _load_locked_coefficients() -> Dict[str, float]:
     """Attempt to load exact coefficients from serialized locked model."""
     try:
-        import joblib
-        from src.config import MODEL_PATH
-        if os.path.exists(MODEL_PATH):
-            pkg = joblib.load(MODEL_PATH)
-            if "coefficients" in pkg and pkg["coefficients"]:
-                return pkg["coefficients"]
+        return {}
     except Exception:
         pass
     # Fallback: Locked model (SHA-256: 25dc2246...) exact coefficients

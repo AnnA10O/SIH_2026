@@ -28,15 +28,20 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, confusio
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.phase_d_training import (
-    load_imd_parquets, build_feature_matrix, event_grouped_split,
-    compute_metrics, find_optimal_threshold, simulate_sensor_outage_blocks
+from src.dataset_builder import (
+    load_imd_parquets,
+    build_feature_matrix,
+    event_grouped_split,
+    compute_metrics,
+    find_optimal_threshold,
+    simulate_sensor_outage_blocks,
 )
+from src.fusion_buffer import DataFusionBuffer
 from src.config import FEATURES_SAT, FEATURES_AWS, FEATURES_STALENESS
 from src.losses.focal_loss import FocalLoss
 from sklearn.impute import SimpleImputer
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cpu")
 OUTPUT_DIR = ROOT / "outputs"
 PLOTS_DIR = OUTPUT_DIR / "plots"
 MODELS_DIR = ROOT / "models"
@@ -138,6 +143,7 @@ def train_nowcaster(
     focal_gamma: float = 2.0,      # only used when loss_fn="focal"
     use_satellite: bool = True,
     checkpoint_path: Path = None,  # if None, defaults to canonical best.pt
+    train_idx: np.ndarray = None,  # persisted split indices (None = recompute)
     val_idx: np.ndarray = None,    # persisted split indices (None = recompute)
     test_idx: np.ndarray = None,   # persisted split indices (None = recompute)
 ):
@@ -155,7 +161,7 @@ def train_nowcaster(
     X_df_deg, _, _, _, feature_names = build_feature_matrix(events_df_deg)
 
     # Build feature sequence
-    core_feats = [f for f in FEATURES_AWS if f in X_df_deg.columns]
+    core_feats = [f for f in FEATURES_AWS if f in X_df_deg.columns and f not in ["spatial_contrast", "R_30", "R_60"]]
     sat_feats   = [] if not use_satellite else [
         f for f in FEATURES_SAT
         if f in X_df_deg.columns and X_df_deg[f].notna().mean() > 0.05
@@ -172,15 +178,22 @@ def train_nowcaster(
     print(f"Staleness features: {stale_feats}")
     print(f"Total features   : {len(ordered_feats)} → model in_features={len(ordered_feats)}")
 
-    # We use the degraded matrix for training to force robustness
-    train_data, val_data, test_data_deg = event_grouped_split(
-        X_df_deg, y_ser, w_ser, event_groups, train_frac=0.70, val_frac=0.15, random_state=42
-    )
-    
-    # And we get a clean test split to maintain apples-to-apples CSI benchmarks
-    _, _, test_data_clean = event_grouped_split(
-        X_df_clean, y_ser, w_ser, event_groups, train_frac=0.70, val_frac=0.15, random_state=42
-    )
+    # If explicit splits are provided (like the chronologial split), use them
+    if train_idx is not None and val_idx is not None and test_idx is not None:
+        def _get_subset(df, y, w, idx):
+            return {"X": df.iloc[idx].values, "y": y.iloc[idx].values, "w": w.iloc[idx].values}
+        train_data = _get_subset(X_df_clean, y_ser, w_ser, train_idx)
+        val_data = _get_subset(X_df_clean, y_ser, w_ser, val_idx)
+        test_data_deg = _get_subset(X_df_clean, y_ser, w_ser, test_idx)
+        test_data_clean = _get_subset(X_df_clean, y_ser, w_ser, test_idx)
+    else:
+        # Fallback: random event-grouped split
+        train_data, val_data, test_data_deg = event_grouped_split(
+            X_df_deg, y_ser, w_ser, event_groups, train_frac=0.70, val_frac=0.15, random_state=42
+        )
+        _, _, test_data_clean = event_grouped_split(
+            X_df_clean, y_ser, w_ser, event_groups, train_frac=0.70, val_frac=0.15, random_state=42
+        )
 
     X_train, y_train, w_train = train_data["X"], train_data["y"], train_data["w"]
     X_val, y_val, w_val = val_data["X"], val_data["y"], val_data["w"]
@@ -405,26 +418,29 @@ def save_split_assignments(force: bool = False) -> None:
     VAL_END   = 2018   # inclusive; test = 2019+
 
     # For each ISO-week×region cluster (integer ID), find the earliest year
-    g_arr = event_groups.values
+    g_arr = event_groups['cluster_id'].values
     gid_to_year = {}
     for gid, yr in zip(g_arr, year_series):
         if gid not in gid_to_year or yr < gid_to_year[gid]:
             gid_to_year[gid] = int(yr)
 
-    train_gids, val_gids, test_gids = set(), set(), set()
-    for gid, min_yr in gid_to_year.items():
-
-        if min_yr <= TRAIN_END:
-            train_gids.add(gid)
-        elif min_yr <= VAL_END:
-            val_gids.add(gid)
+    train_idx_list, val_idx_list, test_idx_list = [], [], []
+    for i, (gid, yr) in enumerate(zip(g_arr, year_series)):
+        if gid != -1:
+            assigned_yr = gid_to_year[gid]
         else:
-            test_gids.add(gid)
+            assigned_yr = int(yr)
+            
+        if assigned_yr <= TRAIN_END:
+            train_idx_list.append(i)
+        elif assigned_yr <= VAL_END:
+            val_idx_list.append(i)
+        else:
+            test_idx_list.append(i)
 
-    all_idx   = np.arange(len(y_ser))
-    train_idx = all_idx[np.isin(g_arr, list(train_gids))]
-    val_idx   = all_idx[np.isin(g_arr, list(val_gids))]
-    test_idx  = all_idx[np.isin(g_arr, list(test_gids))]
+    train_idx = np.array(train_idx_list)
+    val_idx = np.array(val_idx_list)
+    test_idx = np.array(test_idx_list)
 
     n_pos_train = int(y_ser.values[train_idx].sum())
     n_pos_val   = int(y_ser.values[val_idx].sum())
@@ -465,7 +481,7 @@ def tau_sweep(
     model's operating range is well below 0.85.
     """
     if taus is None:
-        taus = tuple(round(t, 2) for t in np.arange(0.05, 0.96, 0.05).tolist())
+        taus = tuple(round(t, 2) for t in np.arange(0.05, 1.00, 0.01).tolist())
     _, val_preds, val_targets = evaluate_loader(
         model, val_loader,
         nn.BCEWithLogitsLoss(reduction="none")  # loss values discarded
@@ -934,8 +950,26 @@ if __name__ == "__main__":
         rerun_baseline_post_dedup(epochs=50, batch_size=4096, patience=12)
         sys.exit(0)
 
-    # Bypass the old chronological focal grid (which requires 24 years of data) 
-    # and directly train the 12-feature model on the available disaster windows
+    if "--run-final" in sys.argv:
+        splits = np.load(OUTPUT_DIR / "split_assignments.npz")
+        model, history, metrics = train_nowcaster(
+            epochs=30, 
+            batch_size=512, 
+            use_satellite=True,
+            loss_fn="focal",
+            focal_alpha=0.25,
+            focal_gamma=2.0,
+            train_idx=splits["train_idx"],
+            val_idx=splits["val_idx"],
+            test_idx=splits["test_idx"]
+        )
+        print("\n--- Final 18-Feature Focal-Loss CNN+BiLSTM Results (Chronological) ---")
+        print(f"POD: {metrics['POD']:.4f}")
+        print(f"FAR: {metrics['FAR']:.4f}")
+        print(f"CSI: {metrics['CSI']:.4f}")
+        sys.exit(0)
+
+    # Fallback default
     model, history, metrics = train_nowcaster(
         epochs=30, 
         batch_size=4096, 

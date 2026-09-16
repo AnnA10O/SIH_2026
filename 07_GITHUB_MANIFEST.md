@@ -9,7 +9,7 @@
 This manifest documents all files designated for upload to GitHub. The repository has undergone deep cleaning:
 - **Zero Credentials Leaks**: All private tokens and API configs (`config.json`, `mosdac_api/config.json`) are strictly excluded. Clean configuration template `config.example.json` is provided.
 - **No Data Bloat**: Massive raw data files (>636 MB raw datasets in `data/`, multi-gigabyte spreadsheets, and 1.1 GB Python virtual environment `nowcast/`) are safely excluded via `.gitignore`.
-- **Clean ML Architecture**: Deprecated legacy models and hardcoded formulas have been cleaned out and updated to the production **1D-CNN + BiLSTM Deep Neural Nowcaster** ($POD = 88.75\%$, $CSI = 0.4154$, $\tau = 0.15$ on unseen 24-year holdout; $CSI = 0.9316$ on LOEO-CV) coupled with the **Dual Neuromorphic SNN Edge Gate** (91.39% edge power reduction) and **2D Hydrodynamic PINN Shallow Water Solver**.
+- **Clean ML Architecture**: Deprecated legacy models and hardcoded formulas have been cleaned out and updated to the production **1D-CNN + BiLSTM Deep Neural Nowcaster** ($POD = 88.75\%$, $CSI = 0.4154$, $\tau = 0.15$ on unseen 24-year holdout; diagnostic LOEO-CV: $CSI = 0.9316$) coupled with the **Dual Neuromorphic SNN Edge Gate** (91.39% edge power reduction) and **2D Hydrodynamic PINN Shallow Water Solver**.
 
 ---
 

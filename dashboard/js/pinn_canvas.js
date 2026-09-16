@@ -744,7 +744,7 @@ function updatePINNBottomPanel(data) {
   const gorgeEl = document.getElementById('pinn-gorge-name');
   const townsEl = document.getElementById('pinn-towns-list');
 
-  if (depthEl) depthEl.innerText = `${data.peak_water_depth_m} m (Flash Flood)`;
+  if (depthEl) depthEl.innerText = `${data.peak_water_depth_m} m (Under-Trained PINN)`;
   if (speedEl) speedEl.innerText = `${data.peak_velocity_m_s} m/s`;
   if (areaEl) areaEl.innerText = `${data.flooded_area_km2} km²`;
   if (gorgeEl) gorgeEl.innerHTML = `<span style="color:var(--orange);">${data.choke_location}</span>`;

@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 def run_all():
     from src.phase_a_region_discovery import run_region_discovery
     from src.phase_c_labeling import run_event_labeling
-    from src.phase_d_training import run_training
+    from src.train_neural_nowcaster_v2 import train_and_evaluate
 
     print("\n" + "=" * 60)
     print("  Cloudburst Nowcasting -- Full Pipeline Run")
@@ -35,7 +35,7 @@ def run_all():
         sys.exit(1)
 
     # Phase D
-    run_training()
+    train_and_evaluate()
 
     print("\n" + "=" * 60)
     print("  Pipeline complete. Outputs:")
@@ -67,8 +67,8 @@ def run_phase_c():
 
 
 def run_phase_d():
-    from src.phase_d_training import run_training
-    run_training()
+    from src.train_neural_nowcaster_v2 import train_and_evaluate
+    train_and_evaluate()
 
 
 if __name__ == "__main__":

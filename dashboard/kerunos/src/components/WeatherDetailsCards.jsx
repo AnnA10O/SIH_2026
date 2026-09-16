@@ -52,6 +52,16 @@ export default function WeatherDetailsCards({ location }) {
     }
   ];
 
+  const SnnGate = ({ gateId, active, label, iconSvg }) => (
+    <div className={`flex flex-col items-center p-3 rounded-xl border ${active ? 'bg-indigo-50 border-indigo-400 shadow-md' : 'bg-slate-50 border-slate-200'}`}>
+      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{label}</span>
+      <div className={`p-2 rounded-lg ${active ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.6)] animate-bounce' : 'bg-slate-200 text-slate-400'}`}>
+        {iconSvg}
+      </div>
+      <span className={`text-xs font-black mt-2 ${active ? 'text-indigo-700' : 'text-slate-400'}`}>{active ? 'DETECTED' : 'STANDBY'}</span>
+    </div>
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -64,6 +74,7 @@ export default function WeatherDetailsCards({ location }) {
         <span className="text-xs text-slate-500">Live Telemetry Synced</span>
       </div>
 
+      {/* Primary Telemetry Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {details.map((item) => {
           const Icon = item.icon;
@@ -92,6 +103,25 @@ export default function WeatherDetailsCards({ location }) {
             </div>
           );
         })}
+      </div>
+
+      {/* SNN Gate AI Detection */}
+      <div className="mt-4 pt-3 border-t border-slate-200">
+        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-widest mb-3 flex items-center"><ShieldAlert className="w-4 h-4 mr-1.5 text-sky-600"/> SNN Pattern Recognition</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <SnnGate 
+            gateId="a" 
+            label="Gate A (Cloudburst)" 
+            active={location.gate_a} 
+            iconSvg={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>}
+          />
+          <SnnGate 
+            gateId="b" 
+            label="Gate B (Thunderstorm)" 
+            active={location.gate_b} 
+            iconSvg={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}
+          />
+        </div>
       </div>
     </div>
   );

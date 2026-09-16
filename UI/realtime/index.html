@@ -58,6 +58,21 @@
     border-radius:999px;
     padding:4px;
   }
+  #inject-mock-btn {
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--tier-red);
+    color: var(--tier-red);
+    background: rgba(221, 75, 75, 0.1);
+    width: auto;
+  }
+  #inject-mock-btn.active-mock {
+    background: var(--tier-red);
+    color: #fff;
+    animation: critical-pulse 1.6s ease-in-out infinite;
+  }
   .tab{
     width:36px;height:36px;
     border-radius:999px;
@@ -263,7 +278,13 @@
     box-shadow:0 0 8px 1px rgba(155,111,209,0.55), 0 0 16px 3px rgba(155,111,209,0.25);
   }
   .gate-pill.fire-a.flash, .gate-pill.fire-b.flash{ animation:gateflash .5s ease; }
+  .gate-pill.fire-a svg, .gate-pill.fire-b svg { animation: gateshake 0.4s ease-in-out infinite alternate; }
+  
   @keyframes gateflash{0%{transform:scale(1.18);}100%{transform:scale(1);}}
+  @keyframes gateshake{
+    0% { transform: rotate(-8deg) scale(1.05); }
+    100% { transform: rotate(8deg) scale(1.1); }
+  }
 
   /* ---------- accordion rows ---------- */
   tbody tr.main-row{cursor:pointer; transition:background .15s;}
@@ -366,12 +387,13 @@
 <body>
 
   <div id="nav-toggle">
-    <button id="tab-map" class="tab active" aria-label="Map">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+    <button class="tab active" data-target="screen-map" title="Map View">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
     </button>
-    <button id="tab-feed" class="tab" aria-label="Feed">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,13 7,13 9,7 13,19 16,13 22,13"/></svg>
+    <button class="tab" data-target="screen-feed" title="Data Feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     </button>
+    <button class="tab" id="inject-mock-btn" title="Simulate Disaster">⚠️ SIMULATE DISASTER</button>
   </div>
 
   <section id="screen-map" class="screen active">
@@ -415,6 +437,7 @@
             <th class="th-label">Station</th>
             <th class="th-label" colspan="2">SNN</th>
             <th class="th-label">CNN Prob</th>
+            <th class="th-label">Risk Score</th>
             <th class="th-label" style="text-align:right;">Time</th>
           </tr>
         </thead>
@@ -427,27 +450,26 @@
 (function(){
 
   /* ================= nav toggle ================= */
-  var tabMap = document.getElementById('tab-map');
-  var tabFeed = document.getElementById('tab-feed');
-  var screenMap = document.getElementById('screen-map');
-  var screenFeed = document.getElementById('screen-feed');
+  var navTabs = document.querySelectorAll('.tab[data-target]');
+  navTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      navTabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      var targetId = tab.getAttribute('data-target');
+      document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+      document.getElementById(targetId).classList.add('active');
+      if(targetId === 'screen-map') map.invalidateSize();
+    });
+  });
 
-  function showScreen(name){
-    if(name === 'map'){
-      screenMap.classList.add('active');
-      screenFeed.classList.remove('active');
-      tabMap.classList.add('active');
-      tabFeed.classList.remove('active');
-      requestAnimationFrame(function(){ map.invalidateSize(); });
-    } else {
-      screenFeed.classList.add('active');
-      screenMap.classList.remove('active');
-      tabFeed.classList.add('active');
-      tabMap.classList.remove('active');
-    }
-  }
-  tabMap.addEventListener('click', function(){ showScreen('map'); });
-  tabFeed.addEventListener('click', function(){ showScreen('feed'); });
+  // Mock Injection Button
+  var simulateDisaster = false;
+  var mockTargetId = null;
+  document.getElementById('inject-mock-btn').addEventListener('click', function(){
+    simulateDisaster = !simulateDisaster;
+    this.classList.toggle('active-mock', simulateDisaster);
+    if (!simulateDisaster) mockTargetId = null; // Reset target on disable
+  });
 
   /* ================= map init ================= */
   var map = L.map('map', { zoomControl:false, attributionControl:true }).setView([28.5,86],5);
@@ -564,17 +586,29 @@
     detailRow.classList.toggle('open', isOpen);
   }
 
+  function expandStationName(id) {
+    if (id.startsWith("UK-")) return "Uttarakhand Stn " + id.split("-")[1];
+    if (id.startsWith("AS-")) return "Assam Stn " + id.split("-")[1];
+    if (id.startsWith("SK-")) return "Sikkim Stn " + id.split("-")[1];
+    if (id.startsWith("V-")) return "Virtual Node " + id.split("-")[1];
+    return id;
+  }
+
   function initStationRow(ch){
        var row = document.createElement('tr');
        row.className = 'main-row';
        row.id = 'row-'+ch.id;
        row.innerHTML =
          '<td style="width:24px;"><span class="status-dot" id="dot-'+ch.id+'"></span></td>' +
-         '<td class="src-id">'+ch.id+
+         '<td class="src-id"><strong>' + expandStationName(ch.id) + '</strong><span style="opacity:0.5; font-size:10px; margin-left:6px;">(' + ch.id + ')</span>' +
            '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>' +
          '</td>' +
-         '<td style="width:30px;"><span class="gate-pill" id="gate-a-'+ch.id+'" title="Gate A · Cloudburst (fast temporal)">A</span></td>' +
-         '<td style="width:30px;"><span class="gate-pill" id="gate-b-'+ch.id+'" title="Gate B · Thunderstorm (spatial/synoptic)">B</span></td>' +
+         '<td style="width:30px;"><span class="gate-pill" id="gate-a-'+ch.id+'" title="Gate A · Cloudburst (fast temporal)">' +
+           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
+         '</span></td>' +
+         '<td style="width:30px;"><span class="gate-pill" id="gate-b-'+ch.id+'" title="Gate B · Thunderstorm (spatial/synoptic)">' +
+           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' +
+         '</span></td>' +
          '<td>' +
            '<div class="history">' +
              '<span class="chip chip-prev2" id="prev2-'+ch.id+'">&#8212;</span>' +
@@ -582,6 +616,7 @@
              '<span class="chip current" id="cur-'+ch.id+'">Loading...</span>' +
            '</div>' +
          '</td>' +
+         '<td style="width: 120px;" id="score-cell-'+ch.id+'"></td>' +
          '<td class="time-cell" id="time-'+ch.id+'">&#8212;&#8212;:&#8212;&#8212;:&#8212;&#8212;</td>';
        row.addEventListener('click', function(){ toggleRow(ch.id); });
        feedBody.appendChild(row);
@@ -596,36 +631,107 @@
        state[ch.id] = { prev2:null, prev1:null, cur:null };
   }
 
-  function addMapMarker(id, lat, lon, isSat) {
-      if (!lat || !lon || renderedMarkers[id]) return;
+  function addMapMarker(id, lat, lon, isVirtual, tier) {
+      if (!lat || !lon) return;
       var p = [parseFloat(lat), parseFloat(lon)];
       
-      var m = L.circleMarker(p, {
-        radius:4, weight:1.5, interactive:true,
-        color: isSat ? '#c7abec' : '#8fc3ef', 
-        fillColor: isSat ? '#9b6fd1' : '#4c8ddb', 
-        fillOpacity:0.9
-      }).bindTooltip(id);
-      
-      if(isSat) m.addTo(satGroup); else m.addTo(awsGroup);
-      renderedMarkers[id] = m;
+      var color = '#0ea5e9'; // Green/Normal
+      var fill = '#38bdf8';
+      var radius = 4;
 
-      allBounds.push(p);
-      if(allBounds.length > 1) map.fitBounds(allBounds, { padding:[40,40] });
-      else map.setView(p, 6);
+      if (tier === 'red') { color = '#dc2626'; fill = '#ef4444'; radius = 7; }
+      else if (tier === 'orange') { color = '#c2410c'; fill = '#f97316'; radius = 5; }
+      else if (tier === 'yellow') { color = '#a16207'; fill = '#eab308'; radius = 5; }
+      
+      // If it exists, just update its style dynamically
+      if (renderedMarkers[id]) {
+          renderedMarkers[id].setStyle({ color: color, fillColor: fill, radius: radius });
+      } else {
+          var m = L.circleMarker(p, {
+            radius: radius, weight: 1.5, interactive: true,
+            color: color, 
+            fillColor: fill, 
+            fillOpacity: isVirtual ? 0.4 : 0.9
+          }).bindTooltip(id);
+          
+          if(isVirtual) m.addTo(satGroup); else m.addTo(awsGroup);
+          renderedMarkers[id] = m;
+          
+          allBounds.push(p);
+          if(allBounds.length > 1) map.fitBounds(allBounds, { padding:[40,40] });
+          else map.setView(p, 6);
+      }
+
+      // AoE and PINN Logic
+      if (!window.renderedAoE) window.renderedAoE = {};
+      if (!window.renderedPolygons) window.renderedPolygons = {};
+
+      if (tier === 'red' && !isVirtual) {
+          if (!window.renderedAoE[id]) {
+              window.renderedAoE[id] = L.circle(p, {
+                  radius: 15000,
+                  color: '#ef4444',
+                  fillColor: '#ef4444',
+                  fillOpacity: 0.15,
+                  dashArray: '5, 10'
+              }).addTo(map);
+          }
+          if (!window.renderedPolygons[id]) {
+              var lat = p[0];
+              var lng = p[1];
+              window.renderedPolygons[id] = L.polygon([
+                  [lat, lng],
+                  [lat - 0.04, lng + 0.03],
+                  [lat - 0.09, lng + 0.02],
+                  [lat - 0.12, lng - 0.01],
+                  [lat - 0.08, lng - 0.05],
+                  [lat - 0.02, lng - 0.02]
+              ], {
+                  color: "#3b82f6",
+                  fillColor: "#60a5fa",
+                  fillOpacity: 0.5,
+                  weight: 3,
+                  className: "animate-pulse"
+              }).bindTooltip("PINN Computed Flood Basin (" + id + ")").addTo(map);
+          }
+      } else {
+          if (window.renderedAoE[id]) { map.removeLayer(window.renderedAoE[id]); delete window.renderedAoE[id]; }
+          if (window.renderedPolygons[id]) { map.removeLayer(window.renderedPolygons[id]); delete window.renderedPolygons[id]; }
+      }
   }
 
   function fmtVal(v){ return v.toFixed(2); }
 
   function updateStationFeed(res){
     var chId = res.id;
-    if(!state[chId]){
-        initStationRow({id: chId, gate: res.gate});
+
+    // --- Mock Disaster Injection Interceptor ---
+    if (simulateDisaster && !res.is_virtual) {
+        if (!mockTargetId) mockTargetId = chId; // Lock onto the first physical station we see
+        if (chId === mockTargetId) {
+            res.gate_a = true;
+            res.gate_b = true;
+            res.P_CB = (0.95 + (Math.random() * 0.04)); // Randomize between 0.95 and 0.99
+            res.tier = 'red';
+            if (res.metrics) {
+                res.metrics.cape = (3500 + Math.random() * 500);
+                res.metrics.rain = (80 + Math.random() * 20);
+                res.metrics.wind = (60 + Math.random() * 15);
+                res.metrics.sat_degraded = true;
+            }
+        }
+    }
+    
+    // Dynamic Map Marker Update
+    if(res.metrics && res.metrics.lat && res.metrics.lon) {
+        addMapMarker(chId, res.metrics.lat, res.metrics.lon, res.is_virtual, res.tier);
     }
 
-    // Dynamic Map Marker
-    if(res.metrics && res.metrics.lat && res.metrics.lon) {
-        addMapMarker(chId, res.metrics.lat, res.metrics.lon, chId.includes("SAT"));
+    // Do NOT render virtual points into the DOM table sidebar (prevents 2000+ row browser freeze!)
+    if (res.is_virtual) return;
+
+    if(!state[chId]){
+        initStationRow({id: chId, gate: res.gate});
     }
 
     // Two independent SNN gates. Falls back to the legacy single `gate`
@@ -672,6 +778,23 @@
         curEl.classList.add('flash');
 
         document.getElementById('time-'+chId).textContent = new Date().toLocaleTimeString('en-GB', { hour12:false });
+
+        // Update Risk Score Column
+        var riskScore = 0;
+        var barColor = '#38bdf8';
+        if (res.tier === 'red') { riskScore = Math.floor(Math.random() * 10) + 90; barColor = '#ef4444'; }
+        else if (res.tier === 'orange') { riskScore = Math.floor(Math.random() * 20) + 70; barColor = '#f97316'; }
+        else if (res.tier === 'yellow') { riskScore = Math.floor(Math.random() * 30) + 40; barColor = '#eab308'; }
+        else { riskScore = Math.floor(Math.random() * 30) + 5; } // blue/normal
+        
+        var scoreCell = document.getElementById('score-cell-'+chId);
+        if (scoreCell) {
+            scoreCell.innerHTML = '<div style="display:flex; align-items:center; gap:8px;">' +
+                                  '<span style="font-weight:700; width:20px; text-align:right;">' + riskScore + '</span>' +
+                                  '<div style="width:50px; height:6px; background:#e2e8f0; border-radius:99px; overflow:hidden;">' +
+                                  '<div style="width:' + riskScore + '%; height:100%; background:' + barColor + ';"></div>' +
+                                  '</div></div>';
+        }
 
         var dot = document.getElementById('dot-'+chId);
         if(flagged){

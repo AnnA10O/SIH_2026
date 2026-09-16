@@ -70,7 +70,7 @@ Full LOEO-CV across all **60** independent event groups:
 |:---|:---:|:---:|:---:|
 | **Probability of Detection (POD)** | **0.9855** | $\\ge 0.85$ | **Exceeded** (98.6%) |
 | **False Alarm Ratio (FAR)** | **0.0560** | $\\le 0.35$ | **Exceeded** (5.6%) |
-| **Critical Success Index (CSI)** | **0.9316** | $\\ge 0.50$ | **Exceeded** (0.9316) |
+| **Critical Success Index (CSI)** | **0.415** *(Holdout)*<br>*(Diagnostic LOEO-CV: 0.931)* | $\\ge 0.50$ | **Needs Work** (Holdout: 0.415) |
 | **PR-AUC** | **0.9755** | $\\ge 0.70$ | **Exceeded** (0.9755) |
 
 ---
@@ -103,7 +103,7 @@ Full LOEO-CV across all **60** independent event groups:
 | System | Ingestion Architecture | Operational Region | Spatial Resolution | CSI Score | Edge Efficiency | Flood Simulation |
 |:---|:---|:---|:---|:---:|:---:|:---:|
 | **ISRO NETRA** | Satellite-only (OLR, CTH, CTT) | Western Himalayas (Uttarakhand/HP) | District-level (~25–50 km) | ~0.35 | No (Static telemetry) | No |
-| **This Model** | **Ground AWS + GNSS IWV + Satellite CTCR Fusion** | **Assam / NE India / Foothills** | **Hyper-local Cluster (4–20 km)** | **0.932 (Test: 0.355)** | **Yes (SNN Gate, 85%+ savings)** | **Yes (Module 6 PINN Handoff)** |
+| **This Model** | **Ground AWS + GNSS IWV + Satellite CTCR Fusion** | **Assam / NE India / Foothills** | **Hyper-local Cluster (4–20 km)** | **0.415**<br>*(LOEO-CV: 0.932)* | **Yes (SNN Gate, 85%+ savings)** | **Yes (Module 6 PINN Handoff)** |
 
 ### Evaluator Differentiation Argument
 > *"ISRO NETRA proved that top-down satellite physics works at district resolution for the Western Himalayas. Our architecture extends this with bottom-up in-situ rain acceleration ($RI$) and GNSS moisture convergence ($IWV$), applies it to the Eastern Himalayas and Northeast India where NETRA does not operate, and adds two missing operational layers: neuromorphic SNN edge gating to conserve telemetry power, and a direct handoff into 2D PINN shallow-water flood simulation."*

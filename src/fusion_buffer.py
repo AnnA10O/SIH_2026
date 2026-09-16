@@ -57,6 +57,8 @@ class ChannelState:
     valid: bool          # False if beyond max_staleness_s (or never received)
     degraded: bool       # True if beyond degraded_staleness_s but still valid
     is_dead: bool        # True if beyond liveness_timeout_s (Level 0 pipeline failure)
+    is_virtual: bool     # True if this reading was interpolated (e.g. IDW)
+    nearest_stn_dist_km: float # Haversine distance to nearest physical sensor
     source_meta: dict    # Kept even if invalid, for debugging!
 
 
@@ -106,7 +108,8 @@ class DataFusionBuffer:
 
         if reading is None:
             return ChannelState(value=None, staleness_s=float("inf"),
-                                valid=False, degraded=False, is_dead=True, source_meta={})
+                                valid=False, degraded=False, is_dead=True,
+                                is_virtual=False, nearest_stn_dist_km=0.0, source_meta={})
 
         staleness = self._now() - reading.timestamp_epoch
         valid = staleness <= policy["max_staleness_s"]
@@ -119,8 +122,15 @@ class DataFusionBuffer:
             valid=valid, 
             degraded=degraded,
             is_dead=is_dead,
+            is_virtual=reading.source_meta.get("is_virtual", False),
+            nearest_stn_dist_km=reading.source_meta.get("nearest_stn_dist_km", 0.0),
             source_meta=reading.source_meta,
         )
+
+    def get_all_station_ids(self) -> List[str]:
+        """Returns all known station IDs (both physical and virtual)."""
+        with self._lock:
+            return list(self._store.keys())
 
     def get_snapshot(self, station_id: str, channels: list) -> Dict[str, ChannelState]:
         """Convenience: full state for one station across the requested channels."""

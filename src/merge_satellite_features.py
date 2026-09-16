@@ -19,21 +19,45 @@ OUTPUT_DIR = ROOT / "data" / "processed" / "satellite_merged"
 # Ensure output dir exists
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-def find_h5_file(dataset_prefix: str, date_str: str) -> Path:
-    """Find the H5 file for a given dataset and date."""
-    # Prefix can be generic like HEM, we check all eras
+import re
+
+def find_h5_file(dataset_prefix: str, target_time_ist: pd.Timestamp) -> Path:
+    """Find the latest H5 file for a given dataset that occurred ON OR BEFORE target_time_ist."""
     for era_prefix in ["K1VHR_L2B_", "3DIMG_L2B_", "3RIMG_L2B_"]:
         # Fix Kalpana-1 HEM -> QPE mapping
         search_dataset = f"{era_prefix}{dataset_prefix}"
         if era_prefix == "K1VHR_L2B_" and dataset_prefix == "HEM":
             search_dataset = "K1VHR_L2B_QPE"
             
-        date_dir = SATELLITE_DIR / search_dataset / date_str
-        if date_dir.exists():
-            files = list(date_dir.glob("*.h5"))
-            if files:
-                return files[0] # Grab the first (and only) file
-    return None
+        # Check today, yesterday, and day before
+        dates_to_check = [
+            target_time_ist.strftime('%Y-%m-%d'),
+            (target_time_ist - pd.Timedelta(days=1)).strftime('%Y-%m-%d'),
+            (target_time_ist - pd.Timedelta(days=2)).strftime('%Y-%m-%d')
+        ]
+        
+        valid_files = []
+        for d in dates_to_check:
+            date_dir = SATELLITE_DIR / search_dataset / d
+            if date_dir.exists():
+                for f in date_dir.glob("*.h5"):
+                    match = re.search(r'_(\d{8}T\d{6}Z)_', f.name)
+                    if match:
+                        try:
+                            # Parse UTC time from filename
+                            file_time_utc = pd.to_datetime(match.group(1), format='%Y%m%dT%H%M%SZ')
+                            file_time_ist = file_time_utc + pd.Timedelta(hours=5.5)
+                            
+                            if file_time_ist <= target_time_ist:
+                                valid_files.append((file_time_ist, f))
+                        except Exception:
+                            pass
+        
+        if valid_files:
+            # Sort by file_time_ist descending and pick the latest one
+            valid_files.sort(key=lambda x: x[0], reverse=True)
+            return valid_files[0][1], valid_files[0][0] # Return Path, Timestamp
+    return None, None
 
 def merge_features_for_region(parquet_path: Path):
     print(f"\n--- Processing {parquet_path.name} ---")
@@ -55,6 +79,10 @@ def merge_features_for_region(parquet_path: Path):
     df['uth_nearest_px_km'] = np.nan
     df['uth_valid'] = 0.0
 
+    # Initialize new tracking columns
+    df['sat_timestamp'] = pd.NaT
+    df['target_t0'] = pd.NaT
+
     # Get unique dates in this region's dataframe
     df['date_str'] = pd.to_datetime(df[time_col]).dt.strftime('%Y-%m-%d')
     unique_dates = df['date_str'].unique()
@@ -62,11 +90,16 @@ def merge_features_for_region(parquet_path: Path):
     processed_rows = 0
     
     for date_str in unique_dates:
+        # Define strict target t0. Since IMD rainfall for 'date_str' is 
+        # accumulated from 08:30 IST on (date-1) to 08:30 IST on date,
+        # a true precursor must be before the accumulation window starts.
+        target_t0_ist = pd.to_datetime(date_str) - pd.Timedelta(days=1) + pd.Timedelta(hours=8, minutes=30)
+        
         # Check if we have satellite data for this date
-        hem_file = find_h5_file("HEM", date_str)
-        olr_file = find_h5_file("OLR", date_str)
-        uth_file = find_h5_file("UTH", date_str)
-        ctp_file = find_h5_file("CTP", date_str) # CTP contains CTT
+        hem_file, hem_ts = find_h5_file("HEM", target_t0_ist)
+        olr_file, olr_ts = find_h5_file("OLR", target_t0_ist)
+        uth_file, uth_ts = find_h5_file("UTH", target_t0_ist)
+        ctp_file, ctp_ts = find_h5_file("CTP", target_t0_ist)
         
         if not hem_file and not olr_file and not uth_file and not ctp_file:
             continue
@@ -126,7 +159,20 @@ def merge_features_for_region(parquet_path: Path):
             df.loc[row_indices, 'uth_nearest_px_km'] = res['dist_km']
             df.loc[row_indices, 'uth_valid'] = res['valid']
             
+        # Log the timestamps to prove no leakage
+        # Take the most recent timestamp among the valid sat files
+        valid_tss = [ts for ts in [hem_ts, olr_ts, uth_ts, ctp_ts] if ts is not None]
+        if valid_tss:
+            max_sat_ts = max(valid_tss)
+            df.loc[row_indices, 'sat_timestamp'] = max_sat_ts
+            df.loc[row_indices, 'target_t0'] = target_t0_ist
+            
         processed_rows += len(rows)
+        
+    # ANTI-LEAKAGE ASSERTION
+    leaked_rows = df[df['sat_timestamp'] > df['target_t0']]
+    if not leaked_rows.empty:
+        raise AssertionError(f"CRITICAL LEAKAGE DETECTED: {len(leaked_rows)} rows have sat_timestamp > target_t0.")
             
     # Drop rows without satellite data (keep only dates we downloaded)
     # We require at least one satellite feature to be present to keep the row

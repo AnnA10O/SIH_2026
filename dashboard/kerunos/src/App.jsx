@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import AlertBanner from "./components/AlertBanner";
 import RiskMap from "./components/RiskMap";
@@ -12,19 +12,109 @@ import ReportsView from "./components/ReportsView";
 import ValidationDrawer from "./components/ValidationDrawer";
 import PinnView from "./components/PinnView";
 
-import {
-  monitoringLocations,
-  riskTimelineData,
-  weatherStations,
-  initialCommunityReports,
-  initialStationMessages,
-  aiModelMetrics
-} from "./data/mockData";
+// Removed all static imports from mockData.js
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("map");
-  const [selectedLocation, setSelectedLocation] = useState(monitoringLocations[0]);
+  const [monitoringLocations, setMonitoringLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [liveStations, setLiveStations] = useState([]);
+  const [aiModelMetrics, setAiModelMetrics] = useState({ f1Score: 0, accuracy: 0, falseAlarmRate: 0 });
+
+  // Fetch live predictions from the inference server
+  useEffect(() => {
+    const fetchNowcast = async () => {
+      try {
+        // Our backend runs on localhost:8000 when launched via run_dashboard.py
+        const res = await fetch("http://localhost:8000/api/nowcast");
+        if (res.ok) {
+          let data = await res.json();
+          
+          // --- Mock Disaster Injection ---
+          if (simulateDisaster && data.length > 0) {
+            let targetIdx = data.findIndex(d => !d.is_virtual);
+            if (targetIdx !== -1) {
+                simulateTargetRef.current = data[targetIdx].id;
+                data[targetIdx] = {
+                    ...data[targetIdx],
+                    gate_a: true,
+                    gate_b: true,
+                    P_CB: 0.98,
+                    tier: 'red',
+                    metrics: {
+                        ...data[targetIdx].metrics,
+                        cape: 4200,
+                        rain: 95.5,
+                        wind: 75
+                    }
+                };
+            }
+          } else {
+              simulateTargetRef.current = null;
+          }
+
+          setLiveStations(data);
+          
+          // Compute the region's overall risk score and populate dynamic locations
+          if (data && data.length > 0) {
+            const dynamicLocations = data
+              .filter(d => !d.is_virtual) // Only feature trusted physical towers in the sidebar locations list
+              .map(d => ({
+                id: d.id,
+                name: expandStationName(d.id),
+                lat: d.lat,
+                lng: d.lng,
+                zoom: 11,
+                riskLevel: d.tier.toUpperCase(),
+                gate_a: d.gate_a,
+                gate_b: d.gate_b,
+                P_CB: d.P_CB,
+                metrics: d.metrics
+              }));
+
+            if (dynamicLocations.length > 0) {
+              setMonitoringLocations(dynamicLocations);
+            }
+
+            const maxProb = Math.max(...data.map(d => d.P_CB || 0));
+            let level = "LOW";
+            if (maxProb >= 0.85) level = "SEVERE";
+            else if (maxProb >= 0.65) level = "HIGH";
+            else if (maxProb >= 0.35) level = "MODERATE";
+            
+            setSelectedLocation(prev => {
+              // If it's the first load, grab the most dangerous physical station
+              const base = prev || dynamicLocations.sort((a, b) => b.riskScore - a.riskScore)[0] || dynamicLocations[0];
+              return {
+                ...base,
+                riskLevel: level,
+                riskPercent: Math.round(maxProb * 100),
+                riskScore: maxProb
+              };
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch live nowcast data:", err);
+      }
+    };
+    fetchNowcast();
+    const interval = setInterval(fetchNowcast, 15000); // 15 sec polling
+
+    // Fetch AI metrics once on mount
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/metrics");
+        if (res.ok) setAiModelMetrics(await res.json());
+      } catch (err) {
+        console.error("Failed to fetch metrics:", err);
+      }
+    };
+    fetchMetrics();
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // When switching tabs, fire a resize event so that canvases (like PINN 3D) 
@@ -37,10 +127,23 @@ export default function App() {
   }, [activeTab]);
 
   // Dynamic state for Station Chat
-  const [messages, setMessages] = useState(initialStationMessages);
+  const [pinnTime, setPinnTime] = useState(0);
+  const [simulateDisaster, setSimulateDisaster] = useState(false);
+  const simulateTargetRef = useRef(null);
+
+  // Helper for expanding names
+  const expandStationName = (id) => {
+    if (id.startsWith("UK-")) return "Uttarakhand Stn " + id.split("-")[1];
+    if (id.startsWith("AS-")) return "Assam Stn " + id.split("-")[1];
+    if (id.startsWith("SK-")) return "Sikkim Stn " + id.split("-")[1];
+    if (id.startsWith("V-")) return "Virtual Node " + id.split("-")[1];
+    return id;
+  };
+
+  const [messages, setMessages] = useState([]);
 
   // Dynamic state for Citizen Ground Reports
-  const [reports, setReports] = useState(initialCommunityReports);
+  const [reports, setReports] = useState([]);
 
   // Modal control
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -77,6 +180,10 @@ export default function App() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
+  if (!selectedLocation) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-slate-900 text-white font-mono animate-pulse">Establishing secure handshake with inference engine...</div>;
+  }
+
   return (
     <div className="h-screen w-screen bg-slate-50 text-slate-800 flex overflow-hidden antialiased">
       {/* Left Navigation Sidebar */}
@@ -90,6 +197,8 @@ export default function App() {
         locations={monitoringLocations}
         selectedLocation={selectedLocation}
         onSelectLocation={setSelectedLocation}
+        simulateDisaster={simulateDisaster}
+        setSimulateDisaster={setSimulateDisaster}
       />
 
       {/* Main Workspace Area */}
@@ -169,7 +278,7 @@ export default function App() {
         )}
 
         {/* Fixed Collapsible Bottom Drawer: Model performance & validation */}
-        <ValidationDrawer />
+        <ValidationDrawer metrics={aiModelMetrics} />
       </main>
 
       {/* Ground Feedback Modal */}

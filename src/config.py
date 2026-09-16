@@ -101,7 +101,20 @@ LOEO_EVENT_BUFFER_HOURS = 12            # hrs before/after peak to group into sa
 L2_C_VALUES = [0.001, 0.01, 0.1, 1.0, 10.0]
 
 # Feature columns (built from MOSDAC data; satellite cols added when available)
-FEATURES_AWS = ["R", "R_30", "R_60", "RI", "RH", "RH_trend", "dewpoint_depression"]
+# Feature columns (built from MOSDAC data; satellite cols added when available)
+FEATURES_AWS = [
+    # Layer 1: sub-daily intensity signals
+    "R", "R_30", "R_60", "RI",
+    # Layer 2a: antecedent moisture (soil saturation proxy)
+    "rain_3day_accum",   # 3-day prior rainfall (mm) — closed="left" excludes today
+    "rain_7day_accum",   # 7-day prior rainfall (mm)
+    "rain_trend_7day",   # linear slope of 7-day window (mm/day) — +ve = moistening
+    # Layer 2b: calendar + terrain (zero-cost, already in parquet)
+    "doy",               # day of year (monsoon phase: onset ~155, withdrawal ~270)
+    "month",             # integer month (coarser monsoon phase)
+    "lat",               # station latitude (terrain type proxy)
+    "lon",               # station longitude
+]
 FEATURES_IWV = ["IWV_now", "IWV_trend_3hr"]
 FEATURES_SAT = ["CTT", "CTCR"]         # added when satellite data available
 FEATURES_TERRAIN = ["elevation"]        # added when DEM available
@@ -124,7 +137,6 @@ CLOUDBURST_EVENTS_CSV   = OUTPUTS / "cloudburst_events.csv"
 TRAINING_REPORT_MD      = OUTPUTS / "training_report.md"
 
 MODELS_DIR              = ROOT / "models"
-MODEL_PATH              = MODELS_DIR / "calibrated_nowcast_model.joblib"  # Baseline linear benchmark
 MODEL_LOCKED_SHA256     = "25dc224652ceec8f5d56da83bbdab1cef7e1eec11d81cabc60e71fe48956905c"
 NEURAL_MODEL_PT         = MODELS_DIR / "cloudburst_cnn_bilstm.pt"         # Production 1D-CNN + BiLSTM PyTorch model
 NEURAL_MODEL_JSON       = MODELS_DIR / "cloudburst_cnn_bilstm_weights.json" # Production browser/edge weights

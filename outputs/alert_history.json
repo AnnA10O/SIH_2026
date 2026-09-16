@@ -103,5 +103,20 @@
             "tier": "Orange",
             "risk_score": 82.5
         }
+    },
+    {
+        "id": "alert-1789589653",
+        "timestamp": "2026-09-17 01:44:13",
+        "region": "Rudraprayag",
+        "tier": "Green",
+        "risk_score": 0.184725821018219,
+        "precaution": "All Clear. No immediate threats detected. Normal conditions.",
+        "network_target": "10.210.48.78:8080",
+        "network_status": "Failed (ConnectTimeout)",
+        "raw_data": {
+            "region": "Rudraprayag",
+            "tier": "Green",
+            "risk_score": 0.184725821018219
+        }
     }
 ]

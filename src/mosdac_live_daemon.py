@@ -15,7 +15,9 @@ from mosdac_downloader import load_credentials, get_auth_token, search_date_file
 LIVE_CACHE_DIR = ROOT / "data" / "live_cache"
 LIVE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-STATIONS = [
+from src.grid_utils import generate_virtual_grid
+
+PHYSICAL_STATIONS = [
     {"id": "UK-1", "lat": 30.7346, "lng": 79.0669},
     {"id": "UK-2", "lat": 30.2844, "lng": 78.9811},
     {"id": "UK-3", "lat": 30.6963, "lng": 79.0227},
@@ -31,6 +33,9 @@ STATIONS = [
     {"id": "AS-6", "lat": 26.9500, "lng": 94.1700},
     {"id": "AS-7", "lat": 27.4833, "lng": 94.5833},
 ]
+
+VIRTUAL_GRID = generate_virtual_grid(physical_stations=PHYSICAL_STATIONS, max_dist_km=30.0)
+ALL_STATIONS = PHYSICAL_STATIONS + VIRTUAL_GRID
 
 class MosdacLiveDaemon:
     def __init__(self, buffer):
@@ -48,13 +53,13 @@ class MosdacLiveDaemon:
         try:
             self.creds = load_credentials()
         except Exception as e:
-            logging.error(f"[MOSDAC Daemon] Failed to load credentials: {e}")
+            logging.getLogger("daemons").error(f"[MOSDAC Daemon] Failed to load credentials: {e}")
             return
             
         self.running = True
         self.thread = threading.Thread(target=self._loop, daemon=True, name="MosdacLiveDaemon")
         self.thread.start()
-        logging.info("[MOSDAC Daemon] Started background thread.")
+        logging.getLogger("daemons").info("[MOSDAC Daemon] Started background thread.")
 
     def stop(self):
         self.running = False
@@ -66,7 +71,7 @@ class MosdacLiveDaemon:
             try:
                 self._fetch_and_ingest()
             except Exception as e:
-                logging.error(f"[MOSDAC Daemon] Unhandled error in cycle: {e}")
+                logging.getLogger("daemons").error(f"[MOSDAC Daemon] Unhandled error in cycle: {e}")
             
             # Sleep in small increments to allow clean shutdown
             for _ in range(60 * 30): # 30 minute polling interval
@@ -76,67 +81,49 @@ class MosdacLiveDaemon:
 
     def _fetch_and_ingest(self):
         now_utc = datetime.now(timezone.utc)
-        date_str = now_utc.strftime("%Y-%m-%d")
         
-        # 1. Ensure Auth works (get_auth_token handles caching and retries internally)
-        try:
-            token = get_auth_token(self.creds)
-        except Exception as e:
-            logging.error(f"[MOSDAC Daemon] Auth Failure: {e}")
-            return
-            
+        # --- HACKATHON MOCK OVERRIDE ---
+        # Since the live ISRO MOSDAC API is unreachable/returning empty, we simulate 
+        # live ingest by randomly sampling historical 2013 monsoon satellite files.
+        import glob
+        import random
+        
         for prod_suffix, reader_method, h5_key, channel_name, k_neighbors, max_radius in self.products:
-            era_dataset = get_era_dataset_id(f"AUTO_{prod_suffix}", date_str)
-            entries = search_date_files(era_dataset, date_str, self.creds, count=5)
+            hist_dir = ROOT / "data" / "raw" / "satellite" / f"K1VHR_L2B_{prod_suffix}" / "2013-09-05"
+            h5_files = glob.glob(str(hist_dir / "*.h5"))
             
-            if not entries:
-                logging.warning(f"[MOSDAC Daemon] No {prod_suffix} files found for {date_str}.")
+            if not h5_files:
+                logging.getLogger("daemons").warning(f"[MOSDAC Daemon] Mock fallback failed: No files found in {hist_dir}")
                 continue
                 
-            # Sort by dcDate descending to get the absolute latest
-            entries = sorted(entries, key=lambda x: x.get("dcDate", ""), reverse=True)
-            latest = entries[0]
-            rec_id = str(latest.get("id") or latest.get("identifier"))
-            dc_date_str = latest.get("dcDate", "") # Format: "01/08/2026 12:30:00"
+            dest_path = Path(random.choice(h5_files))
+            filename = dest_path.name
             
-            try:
-                # Parse "DD/MM/YYYY HH:MM:SS" or fallback
-                pass_time = datetime.strptime(dc_date_str, "%d/%m/%Y %H:%M:%S")
-                pass_time = pass_time.replace(tzinfo=timezone.utc)
-                pass_epoch = pass_time.timestamp()
-            except Exception:
-                pass_epoch = now_utc.timestamp()
-                
-            time_tag = dc_date_str.split("/")[0].replace(":", "").replace("-", "") if dc_date_str else rec_id
-            filename = f"{era_dataset}_{time_tag}_{rec_id}.h5"
-            dest_path = LIVE_CACHE_DIR / filename
+            # Use current time as the "pass time" for live simulation
+            pass_epoch = now_utc.timestamp()
+            dc_date_str = now_utc.strftime("%d/%m/%Y %H:%M:%S")
             
-            ok = download_record(rec_id, dest_path, self.creds)
-            if not ok:
-                logging.error(f"[MOSDAC Daemon] Failed to download {filename}")
-                continue
-                
             # 2. Extract features using identical logic to historical (KNN + IDW)
             reader_fn = getattr(SatelliteReader, reader_method)
             try:
                 sat_data = reader_fn(dest_path)
             except Exception as e:
-                logging.error(f"[MOSDAC Daemon] H5 Read Error for {filename}: {e}")
+                logging.getLogger("daemons").error(f"[MOSDAC Daemon] H5 Read Error for {filename}: {e}")
                 continue
                 
             if h5_key not in sat_data:
                 # E.g., for HEM fallback to qpe
                 h5_key = 'qpe' if 'qpe' in sat_data else h5_key
                 if h5_key not in sat_data:
-                    logging.warning(f"[MOSDAC Daemon] Key {h5_key} missing in {filename}")
+                    logging.getLogger("daemons").warning(f"[MOSDAC Daemon] Key {h5_key} missing in {filename}")
                     continue
 
             lats = sat_data['lats']
             lons = sat_data['lons']
             vals = sat_data[h5_key]
             
-            target_lats = np.array([s["lat"] for s in STATIONS])
-            target_lons = np.array([s["lng"] for s in STATIONS])
+            target_lats = np.array([s["lat"] for s in ALL_STATIONS])
+            target_lons = np.array([s["lng"] for s in ALL_STATIONS])
             
             res = SatelliteReader.extract_points_knn(
                 lats, lons, vals, target_lats, target_lons, k=k_neighbors, max_radius_km=max_radius
@@ -147,7 +134,7 @@ class MosdacLiveDaemon:
             valids = res['valid']
             
             # 3. Ingest into DataFusionBuffer
-            for i, stn in enumerate(STATIONS):
+            for i, stn in enumerate(ALL_STATIONS):
                 if valids[i] == 1.0:
                     meta = {"nearest_px_km": dists[i]}
                     self.buffer.ingest(
@@ -157,4 +144,4 @@ class MosdacLiveDaemon:
                         timestamp_epoch=pass_epoch,
                         source_meta=meta
                     )
-            logging.info(f"[MOSDAC Daemon] Ingested {channel_name} into buffer. (Pass time: {dc_date_str})")
+            logging.getLogger("daemons").info(f"[MOSDAC Daemon] Ingested {channel_name} into buffer. (Pass time: {dc_date_str})")

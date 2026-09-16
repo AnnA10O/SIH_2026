@@ -79,7 +79,7 @@ This document outlines:
 | **ISRO NETRA** | ISRO MOSDAC | Satellite Thermal IR / OLR | District (~25–50 km) | 1 – 3 Hours | **Architecture context** (no traced primary CSI) | High on Monsoons | None (Central Server) |
 | **DGMR** | *Nature* (2021) | Spatiotemporal Radar GAN | 1 km Gridded (UK) | 0 – 90 Min | **0.22 – 0.28** (Supplementary, not main text) | ~0.50 | None (Multi-GPU Cloud) |
 | **NowcastNet (Eval)** | *npj Clim Atmos* (2024) | Physics Advection + Neural SOTA (Das et al.) | 1 km Gridded (US/China) | 0 – 3 Hours | **0.30 @ 16mm/h** | ~0.40 | None (Multi-GPU Cloud) |
-| **This Work (Tier 1)** | **PS 26077 (MoES)** | **Task B: 1D-CNN + BiLSTM Neural Nowcaster (R_60, R_30, R, RI)** | **Himalayan Basins & Foothills (4–20 km)** | **0 – 2 Hours** | **0.415 (Held-Out Test) / 0.932 (LOEO-CV)** | **POD: 88.8% | FAR: 56.1%** | **91.39% (Measured LIF)** |
+| **This Work (Tier 1)** | **PS 26077 (MoES)** | **Task B: 1D-CNN + BiLSTM Neural Nowcaster (R_60, R_30, R, RI)** | **Himalayan Basins & Foothills (4–20 km)** | **0 – 2 Hours** | **0.415 (Held-Out Test)** | **POD: 88.8% | FAR: 56.1%** | **91.39% (Measured LIF)** |
 | **This Work (Tier 2)** | **PS 26077 (MoES)** | **Task A: Multi-Station Spatial Confirmation Gate (L-Score)** | **Cluster Geometry (10–20 km)** | **Post-Trigger** | ⚠️ **Pending independent evaluation** (current L-score filter is circular with labeling rule) | **Pending** | **Zero Telemetry Cost** |
 
 ---
@@ -94,7 +94,7 @@ To maintain strict scientific integrity, the pipeline separates **Task B (Nowcas
   • Ingests pure precursor features: R, RI, R_30, R_60.
   • Evaluated under strict Event-Grouped quarantine (230,604 held-out test samples across 24 years):
   • Performance:
-      - 60-Fold Leave-One-Event-Out (LOEO-CV): POD = 0.9855 (98.6%), FAR = 0.0560 (5.6%), CSI = 0.9316
+      - 60-Fold Leave-One-Event-Out (LOEO-CV) (Diagnostic only, NOT held-out performance): POD = 0.9855 (98.6%), FAR = 0.0560 (5.6%), CSI = 0.9316
       - Held-Out Test Split (15% unseen storm weeks): POD = 0.6088, FAR = 0.5515, CSI = 0.3481
                  │
                  │ Flags HIGH_RISK or CLOUDBURST_LIKELY (P >= 0.60)

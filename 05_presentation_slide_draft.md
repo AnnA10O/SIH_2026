@@ -20,7 +20,7 @@
 │   NowcastNet (Eval)      npj Clim Atmos(2024)Radar Physics-AI (Das et al.) 0.30 @ 16mm/h  FAR ~ 0.40   │
 │  ────────────────────────────────────────────────────────────────────────────────────────────────────  │
 │   THIS WORK (Tier 1)     PS 26077 (MoES)     Task B: 1D-CNN + BiLSTM       0.415 (Held-Out) POD: 88.8% | FAR: 56.1% │
-│   [Deep Neural Nowcaster]                    (230,604 samples, 98:1 ratio) 0.932 (LOEO-CV)   POD: 98.6% | FAR: 5.6%  │
+│   [Deep Neural Nowcaster]                    (230,604 samples, 98:1 ratio) 0.415 (Holdout)   POD: 88.8% | FAR: 56.1% │
 │                                               Prior-shift explanation: King & Zeng (2001)              │
 │   THIS WORK (Tier 2)     PS 26077 (MoES)     Task A: Spatial Confirmation  Architecture:  Post-trigger │
 │   [Network Cross-Check]                      Neighbor L-Score gate          L-Score gate   — pending   │
@@ -58,7 +58,7 @@
    > 
    > **Tier 1 (1D-CNN + BiLSTM Neural Nowcasting Model — Task B)**: Evaluates in-situ rain acceleration and precursor dynamics directly at the station gauge using temporal 1D convolution and Bidirectional LSTM recurrence.
    > • Under untouched operational conditions (quarantined 24-year test split of 230,604 samples under a natural 98:1 class imbalance), Tier 1 achieves CSI = 0.415 with POD = 88.8% and FAR = 56.1% (capturing 2,067 out of 2,329 unseen cloudburst events).
-   > • Under event-balanced Leave-One-Event-Out cross-validation (10:1 ratio across 60 storm folds), it demonstrates 98.6% storm recall with CSI = 0.932 and FAR = 5.6%. This gap reflects the classic rare-events prior-shift (King & Zeng, 2001): a decision boundary calibrated on a 9% prevalence naturally yields higher false alarms when deployed into an uncurated 1% natural prior.
+   > • Under event-balanced Leave-One-Event-Out cross-validation (diagnostic sub-sample only, not held-out performance), it demonstrates 98.6% storm recall with CSI = 0.932 and FAR = 5.6%. This gap reflects the classic rare-events prior-shift (King & Zeng, 2001): a decision boundary calibrated on a 9% prevalence naturally yields higher false alarms when deployed into an uncurated 1% natural prior.
    >
    > **Tier 2 (Spatial Confirmation Gate — Task A)**: Tier 2 queries live neighboring stations to compute the spatial localization score (L-score = (R_core - R_bg) / R_core). NOTE: Because the ground-truth labels were themselves assigned using L-score thresholds (L < 0.40 → negative; L ≥ 0.40 → positive), re-applying the same L-score at inference constitutes circular evaluation. A genuinely independent Tier-2 signal — such as multi-sensor rain-rate consensus, live radar tile cross-check, or temporal rate-of-rise comparison — is required before a defensible held-out filter rate can be reported."*
 

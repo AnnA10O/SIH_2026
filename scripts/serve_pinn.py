@@ -19,8 +19,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+<<<<<<< Updated upstream
 JSON_PATH = Path(__file__).resolve().parent.parent / "outputs" / "pinn_3d_multi_region_FINAL.json"
 ALERTS_JSON_PATH = Path(__file__).resolve().parent.parent / "outputs" / "alert_history.json"
+=======
+JSON_PATH = Path(__file__).resolve().parent.parent / "outputs" / "pinn_3d_multi_region_REAL_UNDERTRAINED.json"
+>>>>>>> Stashed changes
 
 
 def load_pinn_data():

@@ -1,0 +1,4 @@
+Assam Ablation Metrics:
+CSI: 0.4626
+POD: 0.5131
+FAR: 0.1755

@@ -16,26 +16,45 @@ sys.path.insert(0, str(ROOT))
 from src.train_neural_nowcaster_v2 import CloudburstCNNBiLSTM
 from src.pinn_swe import SharedSWEPINN
 from src.fusion_buffer import DataFusionBuffer
-from src.mosdac_live_daemon import MosdacLiveDaemon, STATIONS
+from src.mosdac_live_daemon import MosdacLiveDaemon, ALL_STATIONS
+from src.aws_live_daemon import AwsLiveDaemon
+from src.snn_gate import CloudburstSNNGate, ThunderstormSNNGate
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 LOGS_DIR = ROOT / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Main server logger
 logging.basicConfig(
-    filename=LOGS_DIR / "inference.log",
+    filename=LOGS_DIR / "server.log",
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
+
+# Daemons logger
+daemon_logger = logging.getLogger("daemons")
+daemon_logger.setLevel(logging.INFO)
+dh = logging.FileHandler(LOGS_DIR / "daemons.log")
+dh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+daemon_logger.addHandler(dh)
+daemon_logger.propagate = False
 
 class InferenceOrchestrator:
     def __init__(self):
         logging.info("Initializing DataFusionBuffer and Models...")
         self.buffer = DataFusionBuffer()
         
+        # Stateful Neuromorphic SNN Gates per station
+        self.snn_gates = {}
+        
         # Start the MOSDAC Daemon for live satellite fetching
         self.mosdac_daemon = MosdacLiveDaemon(self.buffer)
         self.mosdac_daemon.start()
+
+        # Start the AWS Daemon for live ground truth and IDW Virtual Grid
+        self.aws_daemon = AwsLiveDaemon(self.buffer)
+        self.aws_daemon.start()
 
         model_path = MODELS_DIR / "cloudburst_cnn_bilstm_best.pt"
         if model_path.exists():
@@ -61,82 +80,20 @@ class InferenceOrchestrator:
         else:
             logging.warning("PINN SWE checkpoint not found. Using untrained weights.")
 
-    def fetch_open_meteo_aws(self):
-        try:
-            logging.info("Attempting Open-Meteo API fallback...")
-            aws_data = {}
-            lats = [str(stn["lat"]) for stn in STATIONS]
-            lons = [str(stn["lng"]) for stn in STATIONS]
-            
-            # Request all 14 stations in a single batched call
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={','.join(lats)}&longitude={','.join(lons)}&current=temperature_2m,precipitation"
-            resp = requests.get(url, timeout=7)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                if isinstance(data, list):
-                    for idx, stn in enumerate(STATIONS):
-                        stn_id = stn["id"]
-                        curr = data[idx].get("current", {})
-                        
-                        # Open-Meteo maps to IMD schema
-                        aws_data[stn_id] = {
-                            "temp": curr.get("temperature_2m", 0.0),
-                            "R": curr.get("precipitation", 0.0),
-                            "R_30": curr.get("precipitation", 0.0) / 2.0,
-                            "R_60": curr.get("precipitation", 0.0)
-                        }
-                return aws_data
-            else:
-                logging.error(f"Open-Meteo API returned status {resp.status_code}")
-                return {}
-        except Exception as e:
-            logging.error(f"Open-Meteo Fallback Failed: {e}")
-            return {}
-
-    def fetch_realtime_imd_aws(self):
-        try:
-            url = "https://api.imd.gov.in/api/v1/aws"
-            api_key = os.environ.get("IMD_API_KEY", "")
-            if not api_key:
-                logging.warning("No IMD_API_KEY provided. Skipping IMD API.")
-                return self.fetch_open_meteo_aws()
-
-            headers = {"Authorization": f"Bearer {api_key}"}
-            
-            resp = requests.get(url, headers=headers, timeout=5)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                if not data:
-                    logging.warning("IMD API returned empty dictionary.")
-                    return self.fetch_open_meteo_aws()
-                return data
-            else:
-                logging.error(f"AWS API returned status {resp.status_code}")
-                return self.fetch_open_meteo_aws()
-        except Exception as e:
-            logging.error(f"AWS API Fetch Failed: {e}")
-            return self.fetch_open_meteo_aws()
-
     def predict_nowcast(self):
-        aws_data = self.fetch_realtime_imd_aws()
         results = []
         
         now = time.time()
-        # 1. Ingest AWS data into Buffer to ensure strict staleness tracking
-        for stn_id, data in aws_data.items():
-            for metric in ['R', 'R_30', 'R_60', 'RI']:
-                if metric in data:
-                    # Ingest using a generic policy if not defined, the buffer handles it
-                    self.buffer.ingest(stn_id, metric, float(data[metric]), timestamp_epoch=now)
+
         
-        # We only predict for stations we actually know about (the 14 defined STATIONS)
-        for stn in STATIONS:
+        # We predict for all stations (physical + virtual grid)
+        for stn in ALL_STATIONS:
             stn_id = stn["id"]
-            data = aws_data.get(stn_id, {})
             
-            # Incorporate hardcoded lat/lon in case AWS API omits it
+            data = {}
+            # We don't have aws_data dict anymore. We get it straight from the buffer in the feature loop below.
+            
+            # Incorporate hardcoded lat/lon
             data["lat"] = stn["lat"]
             data["lon"] = stn["lng"]
             
@@ -190,29 +147,50 @@ class InferenceOrchestrator:
             # Check if any crucial satellite data is DEGRADED (for UI warnings)
             uth_state = self.buffer.get_channel_state(stn_id, 'uth_kalpana')
             is_degraded = uth_state.degraded
+            
+            # Retrieve or initialize SNN Gates for this specific station
+            if stn_id not in self.snn_gates:
+                self.snn_gates[stn_id] = (CloudburstSNNGate(), ThunderstormSNNGate())
+            cb_gate, ts_gate = self.snn_gates[stn_id]
 
-            # Neuromorphic SNN Gate Heuristics
-            # Gate A (Fast Temporal): Spikes on sudden rain intensity
+            # Gate A: Neuromorphic Cloudburst SNN (Fast Temporal)
             r_val = self.buffer.get_channel_state(stn_id, 'R').value or 0.0
-            r60_val = self.buffer.get_channel_state(stn_id, 'R_60').value or 0.0
-            gate_a = bool(r_val > 5.0 or r60_val > 15.0 or prob > 0.6)
+            ri_val = self.buffer.get_channel_state(stn_id, 'RI').value or 0.0
+            gate_a_res = cb_gate.evaluate({"R": r_val, "RI": ri_val})
+            gate_a = gate_a_res["fired_spike"]
 
-            # Gate B (Spatial/Synoptic): Spikes on deep convective clouds (UTH / contrast)
+            # Gate B: Neuromorphic Thunderstorm SNN (Spatial/Synoptic)
+            # In absence of full atmospheric telemetry, we proxy with UTH and Spatial Contrast
             uth_val = uth_state.value if uth_state.value is not None else 0.0
             sc_val = data.get('spatial_contrast', 0.0)
-            gate_b = bool(uth_val > 70.0 or sc_val > 5.0 or prob > 0.7)
+            gate_b_res = ts_gate.evaluate({
+                "IWV_trend": (uth_val / 100.0) * 5.0,  # Proxy IWV trend
+                "pressure_trend": (sc_val / 10.0) * 3.0,
+                "wind_shift": 0.0,
+                "temp_drop": 0.0,
+                "CAPE_trend": 0.0
+            })
+            gate_b = gate_b_res["fired_spike"]
+
+            r_state = self.buffer.get_channel_state(stn_id, 'R')
+            is_virtual = r_state.is_virtual
+            nearest_stn_dist_km = r_state.nearest_stn_dist_km
 
             stn_res = {
                 "id": stn_id,
+                "lat": stn["lat"],
+                "lng": stn["lng"],
                 "gate_a": gate_a,
                 "gate_b": gate_b,
                 "P_CB": float(prob),
                 "tier": tier,
+                "is_virtual": is_virtual,
+                "nearest_stn_dist_km": nearest_stn_dist_km,
                 "metrics": data,
                 "sat_degraded": is_degraded
             }
 
-            if tier == "red":
+            if tier == "red" and not is_virtual:
                 logging.warning(f"RED ALERT at {stn_id}. Triggering PINN SWE Flash Flood Simulation...")
                 sim_res = self.pinn.simulate_inundation(hazard_type="cloudburst", eval_time_hr=1.0)
                 stn_res["pinn"] = sim_res

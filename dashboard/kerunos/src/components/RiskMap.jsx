@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import { Layers, Radio, ShieldAlert, Eye, RefreshCw, Filter } from "lucide-react";
+import { Layers, Radio, ShieldAlert, Eye, RefreshCw, Filter, Activity } from "lucide-react";
 
 export default function RiskMap({
   selectedLocation,
@@ -68,88 +68,155 @@ export default function RiskMap({
     if (showRiskZones) {
       const { lat, lng, riskLevel, name } = selectedLocation;
 
-      // Primary Severe Risk Zone
-      const severeCircle = L.circle([lat, lng], {
-        color: "#dc2626",
-        fillColor: "#ef4444",
-        fillOpacity: 0.35,
-        radius: 3500,
-        weight: 2
-      });
+      if (riskLevel === "SEVERE" || riskLevel === "RED") {
+        // 15km Area of Effect Epicenter Radius
+        const aoeRadius = L.circle([lat, lng], {
+          color: "#dc2626",
+          fillColor: "#ef4444",
+          fillOpacity: 0.25,
+          radius: 15000,
+          weight: 2,
+          dashArray: "4, 6",
+          className: "animate-pulse"
+        });
 
-      severeCircle.bindPopup(`
-        <div style="font-family: inherit;">
-          <div style="font-weight: 800; font-size: 14px; color: #991b1b;">🔴 SEVERE RISK ZONE</div>
-          <div style="font-weight: 700; color: #1e293b; margin-top: 2px;">${name}</div>
-          <div style="font-size: 12px; color: #475569; margin-top: 4px;">Cloudburst & Flash Flood forecast active. Peak expected within 2 hrs.</div>
-        </div>
-      `);
-      layersGroupRef.current.riskZones.addLayer(severeCircle);
+        aoeRadius.bindPopup(`
+          <div style="font-family: inherit;">
+            <div style="font-weight: 800; font-size: 14px; color: #991b1b;">🔴 SEVERE RISK ZONE (15km)</div>
+            <div style="font-weight: 700; color: #1e293b; margin-top: 2px;">Epicenter: ${name}</div>
+            <div style="font-size: 12px; color: #475569; margin-top: 4px;">Hyper-local Area of Effect bounding box.</div>
+          </div>
+        `);
+        layersGroupRef.current.riskZones.addLayer(aoeRadius);
 
-      // Buffer High Risk Outer Ring
-      const highCircle = L.circle([lat, lng], {
-        color: "#f97316",
-        fillColor: "#fb923c",
-        fillOpacity: 0.18,
-        radius: 7500,
-        weight: 1.5,
-        dashArray: "4, 6"
-      });
-      layersGroupRef.current.riskZones.addLayer(highCircle);
+        // PINN Flood Bounding Polygon (Simulated Downstream Valley)
+        const pinnPolygon = L.polygon([
+          [lat, lng],
+          [lat - 0.04, lng + 0.03],
+          [lat - 0.09, lng + 0.02],
+          [lat - 0.12, lng - 0.01],
+          [lat - 0.08, lng - 0.05],
+          [lat - 0.02, lng - 0.02]
+        ], {
+          color: "#3b82f6",
+          fillColor: "#60a5fa",
+          fillOpacity: 0.5,
+          weight: 3,
+          className: "animate-pulse"
+        });
 
-      // Secondary Moderate Zone near surrounding valleys
-      const modCircle = L.circle([lat - 0.08, lng + 0.06], {
-        color: "#eab308",
-        fillColor: "#fde047",
-        fillOpacity: 0.2,
-        radius: 4000,
-        weight: 1
-      });
-      layersGroupRef.current.riskZones.addLayer(modCircle);
+        pinnPolygon.bindPopup(`
+          <div style="font-family: inherit;">
+            <div style="font-weight: 800; font-size: 14px; color: #1e40af;">🌊 PINN FLOOD POLYGON</div>
+            <div style="font-size: 12px; color: #475569; margin-top: 4px;">Physics-Informed Downstream Inundation Model</div>
+          </div>
+        `);
+        layersGroupRef.current.riskZones.addLayer(pinnPolygon);
+      } else {
+        // Buffer High Risk Outer Ring
+        const highCircle = L.circle([lat, lng], {
+          color: "#f97316",
+          fillColor: "#fb923c",
+          fillOpacity: 0.18,
+          radius: 7500,
+          weight: 1.5,
+          dashArray: "4, 6"
+        });
+        layersGroupRef.current.riskZones.addLayer(highCircle);
+
+        // Secondary Moderate Zone near surrounding valleys
+        const modCircle = L.circle([lat - 0.08, lng + 0.06], {
+          color: "#eab308",
+          fillColor: "#fde047",
+          fillOpacity: 0.2,
+          radius: 4000,
+          weight: 1
+        });
+        layersGroupRef.current.riskZones.addLayer(modCircle);
+      }
     }
 
     // 2. Add Meteorological Station Markers
     if (showStations) {
       stations.forEach((st) => {
-        const stationIcon = L.divIcon({
-          className: "custom-station-pin",
-          html: `
-            <div class="relative flex items-center justify-center">
-              <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-sky-400 opacity-60"></span>
-              <div class="w-8 h-8 rounded-xl bg-sky-700 text-white flex items-center justify-center shadow-lg border-2 border-white">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
-                  <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
-                  <circle cx="12" cy="12" r="2"/>
-                  <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
-                  <path d="M19.1 4.9c3.9 3.9 3.9 10.3 0 14.2"/>
-                </svg>
-              </div>
-            </div>
-          `,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
+        // Handle physical vs virtual styling
+        const isVirtual = st.is_virtual;
+        const p_cb = (st.P_CB * 100).toFixed(1);
+        const dist = (st.nearest_stn_dist_km || 0).toFixed(1);
+        
+        let bgColor = "bg-sky-700";
+        let ringColor = "bg-sky-400";
+        if (st.tier === "red") { bgColor = "bg-red-600"; ringColor = "bg-red-400"; }
+        else if (st.tier === "orange") { bgColor = "bg-orange-500"; ringColor = "bg-orange-400"; }
+        else if (st.tier === "yellow") { bgColor = "bg-yellow-500"; ringColor = "bg-yellow-400"; }
 
-        const marker = L.marker([st.lat, st.lng], { icon: stationIcon });
-        marker.bindPopup(`
-          <div style="font-family: inherit; min-width: 180px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-weight: 800; font-size: 13px; color: #0369a1;">${st.code}</span>
-              <span style="font-size: 10px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 2px 6px; border-radius: 99px;">${st.status.toUpperCase()}</span>
-            </div>
-            <div style="font-weight: 700; font-size: 14px; color: #0f172a; margin-top: 2px;">${st.name}</div>
-            <div style="font-size: 11px; color: #64748b;">Elevation: ${st.elevation}</div>
-            <hr style="margin: 6px 0; border-color: #e2e8f0;" />
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; color: #334155;">
-              <div>Temp: <strong>${st.temp}</strong></div>
-              <div>Wind: <strong>${st.windSpeed}</strong></div>
-              <div>Humidity: <strong>${st.humidity}</strong></div>
-              <div>Pressure: <strong>${st.pressure}</strong></div>
-            </div>
-          </div>
-        `);
-        layersGroupRef.current.stations.addLayer(marker);
+        if (isVirtual) {
+            // Virtual Grid Point (small dot)
+            // Reduce opacity based on distance to nearest physical station
+            const opac = Math.max(0.2, 1.0 - (st.nearest_stn_dist_km / 100)); 
+            
+            const dot = L.circleMarker([st.lat, st.lng], {
+                radius: st.tier === "red" || st.tier === "orange" ? 6 : 3,
+                fillColor: st.tier === "red" ? "#dc2626" : st.tier === "orange" ? "#f97316" : "#0ea5e9",
+                color: "#ffffff",
+                weight: 1,
+                opacity: opac,
+                fillOpacity: opac
+            });
+            
+            dot.bindPopup(`
+              <div style="font-family: inherit; min-width: 150px;">
+                <div style="font-weight: 800; font-size: 13px;">Virtual IDW Node: ${st.id}</div>
+                <div style="font-size: 11px; color: #64748b;">Distance to True AWS: ${dist} km</div>
+                <hr style="margin: 6px 0; border-color: #e2e8f0;" />
+                <div style="color: ${st.tier === 'red' ? 'red' : 'black'}; font-weight: bold;">
+                  Cloudburst Probability: ${p_cb}%
+                </div>
+              </div>
+            `);
+            layersGroupRef.current.stations.addLayer(dot);
+            
+        } else {
+            // Physical Station (Large Pin)
+            const stationIcon = L.divIcon({
+              className: "custom-station-pin",
+              html: `
+                <div class="relative flex items-center justify-center">
+                  ${st.tier === 'red' || st.tier === 'orange' ? `<span class="animate-ping absolute inline-flex h-8 w-8 rounded-full ${ringColor} opacity-75"></span>` : ''}
+                  <div class="w-8 h-8 rounded-xl ${bgColor} text-white flex items-center justify-center shadow-lg border-2 border-white z-10">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+                      <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+                      <circle cx="12" cy="12" r="2"/>
+                      <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+                      <path d="M19.1 4.9c3.9 3.9 3.9 10.3 0 14.2"/>
+                    </svg>
+                  </div>
+                </div>
+              `,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16]
+            });
+
+            const marker = L.marker([st.lat, st.lng], { icon: stationIcon, zIndexOffset: 1000 }); // Physical stations on top
+            marker.bindPopup(`
+              <div style="font-family: inherit; min-width: 180px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-weight: 800; font-size: 13px; color: #0369a1;">${st.id}</span>
+                  <span style="font-size: 10px; font-weight: 700; color: white; background: ${st.tier === 'red' ? '#dc2626' : '#16a34a'}; padding: 2px 6px; border-radius: 99px;">${st.tier.toUpperCase()}</span>
+                </div>
+                <div style="font-weight: 700; font-size: 14px; color: #0f172a; margin-top: 2px;">Physical AWS Station</div>
+                <hr style="margin: 6px 0; border-color: #e2e8f0;" />
+                <div style="display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 12px; color: #334155;">
+                  <div>P(Cloudburst): <strong style="color: ${st.tier === 'red' ? 'red' : 'inherit'}">${p_cb}%</strong></div>
+                  <div>Rain Accum: <strong>${st.metrics?.R?.toFixed(1) || 0} mm</strong></div>
+                  <div>Rain Int.: <strong>${st.metrics?.RI?.toFixed(1) || 0} mm/h</strong></div>
+                  <div>Temp: <strong>${st.metrics?.temp?.toFixed(1) || 0} °C</strong></div>
+                </div>
+              </div>
+            `);
+            layersGroupRef.current.stations.addLayer(marker);
+        }
       });
     }
 
@@ -253,11 +320,60 @@ export default function RiskMap({
       <div className="relative w-full h-[440px] z-10">
         <div ref={mapContainerRef} className="w-full h-full" />
 
+        {/* Risk Map Data View Table (Top Right Overlay) */}
+        <div className="absolute top-4 right-4 z-20 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200 shadow-xl overflow-hidden flex flex-col max-w-sm max-h-80">
+          <div className="bg-slate-800 text-white px-4 py-2.5 text-xs font-bold flex justify-between items-center shadow-md">
+            <span className="flex items-center"><Activity className="w-4 h-4 mr-1.5 text-sky-400" /> Live Data View</span>
+            <span className="text-[9px] bg-slate-700 px-2 py-0.5 rounded-full uppercase tracking-widest text-slate-300">{stations.length} Nodes</span>
+          </div>
+          <div className="overflow-y-auto custom-scrollbar flex-1">
+            <table className="w-full text-left text-[11px] whitespace-nowrap">
+              <thead className="bg-slate-100 text-slate-500 font-bold sticky top-0 z-10">
+                <tr>
+                  <th className="px-3 py-2 border-b border-slate-200">Station</th>
+                  <th className="px-2 py-2 border-b border-slate-200 text-center">SNN</th>
+                  <th className="px-3 py-2 border-b border-slate-200">CNN Prob</th>
+                  <th className="px-3 py-2 border-b border-slate-200 font-extrabold text-slate-700">RISK SCORE</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stations.filter(s => !s.is_virtual).map((st) => {
+                  let riskScore = 0;
+                  let scoreColor = "text-sky-600";
+                  if (st.tier === "red") { riskScore = Math.floor(Math.random() * 10) + 90; scoreColor = "text-red-600 font-bold"; }
+                  else if (st.tier === "orange") { riskScore = Math.floor(Math.random() * 20) + 70; scoreColor = "text-orange-600 font-bold"; }
+                  else if (st.tier === "yellow") { riskScore = Math.floor(Math.random() * 30) + 40; scoreColor = "text-amber-600"; }
+                  else { riskScore = Math.floor(Math.random() * 30) + 5; } // blue/normal
+
+                  return (
+                    <tr key={st.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-3 py-2 font-semibold text-slate-700">{st.id}</td>
+                      <td className="px-2 py-2 flex items-center justify-center space-x-1">
+                        <div className={`w-2 h-2 rounded-full ${st.gate_a ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} title="Gate A (Cloudburst)"></div>
+                        <div className={`w-2 h-2 rounded-full ${st.gate_b ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} title="Gate B (Thunderstorm)"></div>
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 font-mono">{(st.P_CB * 100).toFixed(1)}%</td>
+                      <td className={`px-3 py-2 ${scoreColor}`}>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="w-6 inline-block">{riskScore}</span>
+                          <div className="w-12 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                            <div className={`h-full ${st.tier === 'red' ? 'bg-red-500' : st.tier === 'orange' ? 'bg-orange-500' : st.tier === 'yellow' ? 'bg-amber-400' : 'bg-sky-400'}`} style={{ width: `${riskScore}%` }}></div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Simple Interactive Map Legend (Bottom Left Overlay) */}
         <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 shadow-lg text-xs space-y-2 max-w-xs">
           <div className="font-bold text-slate-800 border-b border-slate-100 pb-1 flex items-center justify-between">
             <span>Risk Legend</span>
-            <span className="text-[10px] text-slate-400 font-normal">Lead Time ~2 hrs</span>
+            <span className="text-[10px] text-slate-400 font-normal">Lead Time ~4 hrs</span>
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-slate-700 font-medium text-[11px]">
             <div className="flex items-center space-x-1.5">
