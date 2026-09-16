@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Himalayan Cloudburst Early Warning — One-Glance Console</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --void:#070b12;
+    --panel:#0c131f;
+    --panel-2:#101a29;
+    --panel-soft:rgba(255,255,255,0.03);
+    --border:rgba(148,163,184,0.14);
+    --border-soft:rgba(148,163,184,0.08);
+    --text-1:#eef2f8;
+    --text-2:#9aa7bd;
+    --text-3:#5d6a82;
+    --teal:#5eead4;
+    --teal-dim:rgba(94,234,212,0.14);
+    --teal-line:rgba(94,234,212,0.35);
+    --blue:#7dd3fc;
+
+    /* reserved strictly for emergency status */
+    --g:#22c55e; --y:#eab308; --o:#f97316; --r:#ef4444;
+    --g-dim:rgba(34,197,94,0.14); --y-dim:rgba(234,179,8,0.14); --o-dim:rgba(249,115,22,0.14); --r-dim:rgba(239,68,68,0.16);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(94,234,212,0.05), transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, rgba(125,211,252,0.05), transparent 55%),
+      var(--void);
+    color:var(--text-1);
+    font-family:'Space Grotesk',sans-serif;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:22px 16px 40px;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ── Canvas frame — a fixed console surface, not a phone ── */
+  #canvas{
+    width:1360px; max-width:100%;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55);
+  }
+  .canvas-topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+  .brand{display:flex; align-items:center; gap:9px;}
+  .brand-mark{width:9px;height:9px;border-radius:50%;background:var(--teal); box-shadow:0 0 10px rgba(94,234,212,0.7);}
+  .brand-name{font-weight:700; font-size:13px; letter-spacing:0.01em;}
+  .brand-sub{color:var(--text-3); font-size:11px; margin-left:8px;}
+  .topbar-status{display:flex; align-items:center; gap:10px;}
+  .status-pill{
+    display:flex; align-items:center; gap:6px;
+    padding:5px 11px; border-radius:20px;
+    font-size:11px; font-weight:700; letter-spacing:0.03em;
+    border:1px solid var(--g); background:var(--g-dim); color:var(--g);
+  }
+  .status-pill .dot{width:6px;height:6px;border-radius:50%; background:currentColor; box-shadow:0 0 6px currentColor;}
+  .clock{color:var(--text-2); font-size:11px;}
+
+  .ui-switch-link{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:5px 10px; border-radius:6px;
+    font-size:10.5px; font-weight:600; text-decoration:none;
+    background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    color:var(--text-2); transition:all .15s ease;
+  }
+  .ui-switch-link:hover{
+    background:rgba(94,234,212,0.12); border-color:var(--teal-line); color:var(--teal);
+  }
+
+  /* ── Grid: 3 columns × 2 rows, so gauges (bottom-left) sit level with the
+     river/PINN panel (bottom-right) — everything fits in one glance, no scroll ── */
+  .grid{
+    display:grid;
+    grid-template-columns: 1.55fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "top1 top2 top3"
+      "gauges river river";
+    gap:1px; background:var(--border-soft);
+  }
+  .area-top1{grid-area:top1;}
+  .area-top2{grid-area:top2;}
+  .area-top3{grid-area:top3;}
+  .area-gauges{grid-area:gauges;}
+  .area-river{grid-area:river; display:grid; grid-template-columns:1fr 200px; gap:1px; background:var(--border-soft);}
+  .col{background:var(--panel); padding:14px;}
+  .panel-title{
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em;
+    color:var(--text-2); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .panel-title small{font-size:9.5px; color:var(--text-3); font-weight:600; text-transform:none; letter-spacing:0;}
+
+  /* ── Map ── */
+  .map-wrap{
+    position:relative; height:200px; border-radius:10px; overflow:hidden;
+    border:1px solid var(--border);
+    background:
+      linear-gradient(180deg, rgba(94,234,212,0.05), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 26px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 26px),
+      #0a121d;
+    margin-bottom:10px;
+  }
+  .map-chips{position:absolute; top:8px; left:8px; display:flex; gap:5px; flex-wrap:wrap; max-width:78%;}
+  .chip{font-size:9px; padding:3px 8px; border-radius:12px; background:rgba(8,14,24,0.75); border:1px solid var(--border); color:var(--text-2); font-weight:600; white-space:nowrap;}
+  .chip.active{border-color:var(--teal-line); color:var(--teal); background:rgba(94,234,212,0.08);}
+  .map-badge{
+    position:absolute; top:8px; right:8px;
+    background:rgba(7,11,18,0.82); border:1px solid var(--border); border-radius:8px;
+    padding:5px 9px; font-size:9.5px; color:var(--text-2); display:flex; align-items:center; gap:6px;
+  }
+  .map-badge .dot{width:6px;height:6px;border-radius:50%; background:var(--teal); box-shadow:0 0 6px var(--teal);}
+  .map-legend{
+    position:absolute; bottom:8px; left:8px; display:flex; gap:9px; flex-wrap:wrap;
+    background:rgba(7,11,18,0.7); border:1px solid var(--border); border-radius:7px; padding:5px 9px;
+  }
+  .legend-item{display:flex; align-items:center; gap:4px; font-size:8.5px; color:var(--text-2);}
+  .legend-dot{width:6px;height:6px;border-radius:50%;}
+  .station-dot{position:absolute; width:6px; height:6px; border-radius:50%; background:var(--g); box-shadow:0 0 5px var(--g);}
+
+  /* ── Metro pipeline timeline ── */
+  .metro-box{
+    border:1px solid var(--border); border-radius:10px; background:var(--panel-2);
+    padding:12px 14px 10px; margin-bottom:10px;
+  }
+  .metro-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .metro-head-title{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-2);}
+  .metro-head-badge{font-family:'IBM Plex Mono',monospace; font-size:9.5px; font-weight:700; color:var(--teal); background:var(--teal-dim); padding:2px 7px; border-radius:5px;}
+
+  .metro-track{position:relative; height:96px; margin:4px 0 8px;}
+  .metro-svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+  .metro-seg{fill:none; stroke:rgba(255,255,255,0.10); stroke-width:2.4; stroke-linecap:round; vector-effect:non-scaling-stroke; transition:stroke .4s ease;}
+  .metro-seg.filled{stroke:var(--teal);}
+  .metro-traveler{fill:var(--teal); opacity:0; filter:drop-shadow(0 0 5px rgba(94,234,212,0.85)); transition:opacity .2s ease;}
+  .metro-traveler.moving{opacity:1;}
+  .metro-station{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0;}
+  .metro-dot{width:12px; height:12px; border-radius:50%; background:var(--panel); border:2.5px solid rgba(255,255,255,0.16); transition:all .25s ease;}
+  .metro-station.done .metro-dot{background:var(--teal); border-color:var(--teal);}
+  .metro-station.active .metro-dot{width:16px; height:16px; background:var(--teal); border-color:var(--teal); box-shadow:0 0 0 4px rgba(94,234,212,0.2);}
+  .metro-dot.arrive{animation:arrive .7s ease-out;}
+  @keyframes arrive{0%{box-shadow:0 0 0 0 rgba(94,234,212,0.55);} 70%{box-shadow:0 0 0 14px rgba(94,234,212,0);} 100%{box-shadow:0 0 0 0 rgba(94,234,212,0);}}
+  .metro-label{font-size:8.5px; font-weight:600; color:var(--text-3); text-align:center; line-height:1.2; max-width:64px; white-space:nowrap;}
+  .metro-station.active .metro-label{color:var(--text-1);}
+  .metro-station.done .metro-label{color:var(--text-2);}
+  .metro-branch-tag{position:absolute; left:70%; top:50%; transform:translate(-50%,-50%); font-size:7.5px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-3); background:var(--panel-2); padding:1px 4px; border-radius:4px;}
+
+  .metro-detail{
+    background:rgba(255,255,255,0.025); border:1px solid var(--border-soft); border-radius:8px;
+    padding:8px 10px; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;
+  }
+  .metro-detail-row{display:flex; justify-content:space-between; gap:8px; font-size:10px;}
+  .metro-detail-k{color:var(--text-3); flex-shrink:0;}
+  .metro-detail-v{color:var(--text-1); font-weight:600; text-align:right;}
+  .metro-action-text{color:var(--text-2); font-size:9.5px; line-height:1.4;}
+
+  .metro-nav{display:flex; align-items:center; gap:6px;}
+  .metro-btn{
+    background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-2);
+    font-size:9.5px; font-weight:700; padding:5px 9px; border-radius:6px; cursor:pointer; transition:all .15s ease;
+  }
+  .metro-btn:hover{background:rgba(94,234,212,0.12); border-color:var(--teal-line); color:var(--teal);}
+  .metro-btn-main{
+    flex:1; text-align:center; background:linear-gradient(135deg, rgba(94,234,212,0.22), rgba(125,211,252,0.16));
+    border:1px solid var(--teal-line); color:var(--teal);
+  }
+  .metro-btn-main:hover{background:linear-gradient(135deg, rgba(94,234,212,0.32), rgba(125,211,252,0.24));}
+  .metro-controls{display:flex; gap:6px; margin-top:7px;}
+  .metro-controls .metro-btn{flex:1; text-align:center; font-size:9px; padding:4px 6px; color:var(--text-3);}
+
+  /* ── Gauges ── */
+  .gauge-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .gauge{
+    border:1px solid var(--border); border-radius:10px; background:var(--panel-2);
+    padding:10px 8px 11px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;
+  }
+  .gauge-name{font-size:11px; font-weight:700; color:var(--text-1); line-height:1.2; min-height:27px; display:flex; align-items:center; justify-content:center;}
+  .gauge-ring{position:relative; width:64px; height:64px;}
+  .gauge-ring svg{transform:rotate(-90deg);}
+  .gauge-ring-track{fill:none; stroke:rgba(255,255,255,0.08); stroke-width:6;}
+  .gauge-ring-fill{fill:none; stroke:var(--teal); stroke-width:6; stroke-linecap:round; transition:stroke-dashoffset 1s ease;}
+  .gauge-value{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .gauge-num{font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:var(--text-1);}
+  .gauge-unit{font-size:7.5px; color:var(--text-3); font-weight:600;}
+  .gauge-note{font-size:8.5px; color:var(--text-3); font-weight:600;}
+
+  /* ── Center: risk & timeline ── */
+  .risk-card{border:1px solid var(--border); border-radius:10px; background:var(--panel-2); padding:12px 13px; margin-bottom:10px;}
+  .risk-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .risk-label{display:flex; align-items:center; gap:7px;}
+  .risk-name{font-size:11.5px; font-weight:700; color:var(--text-1);}
+  .risk-threshold{font-size:8.5px; font-family:'IBM Plex Mono',monospace; padding:2px 6px; border-radius:4px; background:var(--y-dim); color:var(--y); border:1px solid rgba(234,179,8,0.3); white-space:nowrap;}
+  .risk-val{font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:700; color:var(--g);}
+  .risk-bar{position:relative; height:7px; border-radius:4px; background:rgba(255,255,255,0.07); margin-bottom:9px; overflow:visible;}
+  .risk-bar-fill{position:absolute; inset:0; width:1%; border-radius:4px; background:linear-gradient(90deg, var(--g), var(--y)); transition:width 1s ease;}
+  .risk-marker{position:absolute; top:-3px; left:15%; width:2px; height:13px; background:var(--text-2); border-radius:1px;}
+  .risk-status-row{display:flex; justify-content:space-between; font-size:10.5px; margin-top:2px;}
+  .risk-status-row .k{color:var(--text-3);}
+  .risk-status-row .v{color:var(--g); font-weight:700;}
+
+  .timeline-box{border:1px solid var(--border); border-radius:10px; background:var(--panel-2); padding:11px 13px; margin-bottom:10px;}
+  .timeline-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .timeline-title{font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-2);}
+  .timeline-badge{font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:10px; background:var(--teal-dim); color:var(--teal);}
+  .timeline-item{display:flex; gap:9px; padding:6px 0; border-top:1px solid var(--border-soft);}
+  .timeline-item:first-child{border-top:none;}
+  .timeline-dot{width:7px; height:7px; border-radius:50%; background:var(--teal); margin-top:5px; flex-shrink:0; box-shadow:0 0 5px var(--teal);}
+  .timeline-name{font-size:10.5px; font-weight:700; color:var(--text-1);}
+  .timeline-time{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--teal); font-weight:600;}
+  .timeline-sub{font-size:9px; color:var(--text-3); margin-top:1px;}
+
+  .fact-grid{display:flex; flex-direction:column; gap:2px;}
+  .fact-row{display:flex; flex-direction:column; gap:1px; font-size:10.5px; padding:6px 0; border-top:1px solid var(--border-soft);}
+  .fact-row .k{color:var(--text-3); font-size:9px;}
+  .fact-row .v{color:var(--text-1); font-weight:600;}
+
+  /* ── Right: why ── */
+  .why-card{border:1px solid var(--border); border-radius:10px; background:var(--panel-2); padding:12px 13px; margin-bottom:10px;}
+  .why-head{display:flex; flex-direction:column; gap:8px; margin-bottom:7px;}
+  .why-q{font-size:13px; font-weight:700; color:var(--text-1); line-height:1.25;}
+  .why-badge{align-self:flex-start; font-size:9px; font-weight:700; padding:4px 8px; border-radius:6px; background:var(--g-dim); color:var(--g); border:1px solid var(--g); white-space:nowrap;}
+  .why-sub{font-size:10.5px; color:var(--text-2); line-height:1.5; margin-bottom:8px;}
+
+  .factor{display:flex; gap:9px; padding:8px 0; border-top:1px solid var(--border-soft);}
+  .factor:first-child{border-top:none;}
+  .factor-num{width:18px; height:18px; border-radius:50%; background:var(--teal-dim); color:var(--teal); font-size:9.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;}
+  .factor-title{font-size:10.5px; font-weight:700; color:var(--text-1);}
+  .factor-title span.tag{display:block; font-size:9px; font-weight:600; color:var(--teal); margin-top:2px;}
+
+  .evid-box{border:1px solid var(--border); border-radius:10px; background:var(--panel-2); padding:11px 13px;}
+  .evid-title{font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-2); margin-bottom:9px;}
+  .evid-row{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
+  .evid-name{font-size:9.5px; color:var(--text-2); width:98px; flex-shrink:0;}
+  .evid-track{flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden;}
+  .evid-fill{height:100%; background:var(--teal); border-radius:3px;}
+  .evid-pct{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-1); font-weight:700; width:32px; text-align:right;}
+
+  /* ── Bottom row: river profile ── */
+  .river-col{background:var(--panel); padding:14px; min-width:0;}
+  .river-head{display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+  .river-title{font-size:11px; font-weight:700; color:var(--text-1);}
+  .river-tag{font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:5px; background:var(--teal-dim); color:var(--teal);}
+  .river-tag.warn{background:var(--y-dim); color:var(--y);}
+  .river-chart{position:relative; height:110px; border-radius:8px; border:1px solid var(--border); background:var(--panel-2); overflow:hidden;}
+  .river-labels{display:flex; justify-content:space-between; margin-top:6px; font-size:8.5px; color:var(--text-3);}
+  .river-labels b{color:var(--text-2); display:block; font-size:9px;}
+
+  .stat-col{background:var(--panel); padding:14px; display:flex; flex-direction:column; gap:8px; justify-content:center;}
+  .stat-box{border:1px solid var(--border); border-radius:8px; background:var(--panel-2); padding:8px 10px; display:flex; justify-content:space-between; align-items:center;}
+  .stat-name{font-size:9.5px; color:var(--text-2); font-weight:600;}
+  .stat-val{font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:var(--text-1);}
+  @media (max-width: 900px){
+    .grid{
+      grid-template-columns: 1fr;
+      grid-template-areas: "top1" "gauges" "top2" "top3" "river";
+    }
+    .area-river{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas">
+
+  <div class="canvas-topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Himalayan Cloudburst Early Warning</div>
+      <div class="brand-sub">40-station network · Mandakini &amp; Alaknanda basins</div>
+    </div>
+    <div class="topbar-status">
+      <div class="status-pill" id="hero-status"><div class="dot"></div>NORMAL — ROUTINE</div>
+      <div class="clock mono" id="clock">--:-- IST</div>
+      <a href="previous_ui.html" class="ui-switch-link" title="Open Previous 3-Column Mission Control UI">
+        &larr; Switch to Previous UI (v1)
+      </a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- ── top1: map + pipeline timeline ── -->
+    <div class="col area-top1">
+      <div class="panel-title">Station Map <small>40 stations · live telemetry</small></div>
+      <div class="map-wrap">
+        <div class="map-chips">
+          <span class="chip active">All Basins</span>
+          <span class="chip">Mandakini</span>
+          <span class="chip">Alaknanda</span>
+          <span class="chip">Bhagirathi</span>
+        </div>
+        <div class="map-badge"><div class="dot"></div>40/40 reporting</div>
+        <div class="station-dot" style="left:22%; top:38%;"></div>
+        <div class="station-dot" style="left:31%; top:52%;"></div>
+        <div class="station-dot" style="left:44%; top:31%;"></div>
+        <div class="station-dot" style="left:52%; top:60%;"></div>
+        <div class="station-dot" style="left:63%; top:44%;"></div>
+        <div class="station-dot" style="left:71%; top:29%;"></div>
+        <div class="station-dot" style="left:58%; top:22%;"></div>
+        <div class="station-dot" style="left:37%; top:66%;"></div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--g);"></div>Normal</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--y);"></div>Watch</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--o);"></div>Warning</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r);"></div>Severe</div>
+        </div>
+      </div>
+
+      <!-- Animated branching model pipeline timeline -->
+      <div class="metro-box">
+        <div class="metro-head">
+          <span class="metro-head-title">Model Handoff — Live</span>
+          <span class="metro-head-badge mono" id="metroStageBadge">STAGE 1 / 5</span>
+        </div>
+
+        <div class="metro-track">
+          <svg class="metro-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path class="metro-seg" data-seg="1-2" d="M6,50 L30,50"></path>
+            <path class="metro-seg" data-seg="2-3" d="M30,50 L54,50"></path>
+            <path class="metro-seg" data-seg="3-4" d="M54,50 L86,20"></path>
+            <path class="metro-seg" data-seg="3-5" d="M54,50 L86,80"></path>
+            <circle class="metro-traveler" id="metroTraveler" cx="6" cy="50" r="2.6"></circle>
+          </svg>
+          <span class="metro-branch-tag">splits into</span>
+          <button class="metro-station active" id="mstation-1" style="left:6%;top:50%;" onclick="setStage(1)">
+            <div class="metro-dot"></div><span class="metro-label">Weather Sensors</span>
+          </button>
+          <button class="metro-station" id="mstation-2" style="left:30%;top:50%;" onclick="setStage(2)">
+            <div class="metro-dot"></div><span class="metro-label">Battery Switch</span>
+          </button>
+          <button class="metro-station" id="mstation-3" style="left:54%;top:50%;" onclick="setStage(3)">
+            <div class="metro-dot"></div><span class="metro-label">AI Nowcaster</span>
+          </button>
+          <button class="metro-station" id="mstation-4" style="left:86%;top:20%;" onclick="setStage(4)">
+            <div class="metro-dot"></div><span class="metro-label">Neighbor Check</span>
+          </button>
+          <button class="metro-station" id="mstation-5" style="left:86%;top:80%;" onclick="setStage(5)">
+            <div class="metro-dot"></div><span class="metro-label">Flood Sim</span>
+          </button>
+        </div>
+
+        <div class="metro-detail">
+          <div class="metro-detail-row"><span class="metro-detail-k">Working now</span><span class="metro-detail-v" id="metroWho">Ambient Telemetry Ingest</span></div>
+          <div class="metro-action-text" id="metroAction">Monitoring 40 mountain stations. Sensor is sleeping to save battery.</div>
+          <div class="metro-detail-row"><span class="metro-detail-k">Passing data to</span><span class="metro-detail-v" id="metroHandoff">Battery Switch (SNN)</span></div>
+        </div>
+
+        <div class="metro-nav">
+          <button class="metro-btn" id="btnPrev" onclick="step(-1)">&larr; Prev</button>
+          <button class="metro-btn metro-btn-main" id="btnHandoff" onclick="step(1)">Hand Over to Next Model &rarr;</button>
+        </div>
+        <div class="metro-controls">
+          <button class="metro-btn" id="btnPlay" onclick="playDemo()">&#9654; Auto walkthrough</button>
+          <button class="metro-btn" onclick="resetDemo()">&#8635; Reset</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── gauges: bottom-left, level with the river/PINN panel ── -->
+    <div class="col area-gauges">
+      <div class="panel-title">Live Telemetry</div>
+      <div class="gauge-row" id="gaugeRow"></div>
+    </div>
+
+    <!-- ── top2: risk + timeline ── -->
+    <div class="col area-top2">
+      <div class="panel-title">Risk &amp; Timing</div>
+
+      <div class="risk-card">
+        <div class="risk-top">
+          <div class="risk-label">
+            <span class="risk-name">Risk of Cloudburst</span>
+            <span class="risk-threshold">15% alert</span>
+          </div>
+          <span class="risk-val mono">0.8%</span>
+        </div>
+        <div class="risk-bar"><div class="risk-marker"></div><div class="risk-bar-fill" style="width:5%;"></div></div>
+        <div class="risk-status-row"><span class="k">Status</span><span class="v">Normal</span></div>
+      </div>
+
+      <div class="timeline-box">
+        <div class="timeline-head"><span class="timeline-title">Timeline (IST)</span><span class="timeline-badge">STABLE</span></div>
+        <div class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-name">Heavy rain starts</div><div class="timeline-time">08:04 IST</div></div></div>
+        <div class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-name">Peak cloudburst rain</div><div class="timeline-time">11:34 IST</div></div></div>
+        <div class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-name">Flood reaches town</div><div class="timeline-time">12:09 IST</div></div></div>
+        <div class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-name">Last time to evacuate</div><div class="timeline-time">11:44 IST</div></div></div>
+      </div>
+
+      <div class="timeline-box">
+        <div class="fact-grid">
+          <div class="fact-row"><span class="k">River depth</span><span class="v">0.4 m</span></div>
+          <div class="fact-row"><span class="k">Bottleneck town</span><span class="v">Sonprayag</span></div>
+          <div class="fact-row"><span class="k">Recedes by</span><span class="v">13:29 IST</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── top3: why ── -->
+    <div class="col area-top3">
+      <div class="panel-title">Why This Call</div>
+      <div class="why-card">
+        <div class="why-head">
+          <span class="why-q">Cloudburst vs. routine rain</span>
+          <span class="why-badge">NORMAL BASEFLOW</span>
+        </div>
+        <div class="why-sub">Moisture, rain speed, and nearby stations all read normal.</div>
+
+        <div class="factor">
+          <div class="factor-num">1</div>
+          <div style="flex:1;">
+            <div class="factor-title">Cloud moisture <span class="tag">34 mm — normal</span></div>
+          </div>
+        </div>
+        <div class="factor">
+          <div class="factor-num">2</div>
+          <div style="flex:1;">
+            <div class="factor-title">Rain spike <span class="tag">steady rain</span></div>
+          </div>
+        </div>
+        <div class="factor">
+          <div class="factor-num">3</div>
+          <div style="flex:1;">
+            <div class="factor-title">Regional spread <span class="tag">calm basin</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="evid-box">
+        <div class="evid-title">What made the AI decide this</div>
+        <div class="evid-row"><span class="evid-name">Moisture</span><div class="evid-track"><div class="evid-fill" style="width:62%;"></div></div><span class="evid-pct mono">+6%</span></div>
+        <div class="evid-row"><span class="evid-name">Rain speed</span><div class="evid-track"><div class="evid-fill" style="width:4%;"></div></div><span class="evid-pct mono">+0%</span></div>
+        <div class="evid-row"><span class="evid-name">Rain spike</span><div class="evid-track"><div class="evid-fill" style="width:4%;"></div></div><span class="evid-pct mono">+0%</span></div>
+        <div class="evid-row"><span class="evid-name">Wet ground</span><div class="evid-track"><div class="evid-fill" style="width:6%;"></div></div><span class="evid-pct mono">+0%</span></div>
+      </div>
+    </div>
+
+    <!-- ── river: bottom-right, level with gauges ── -->
+    <div class="area-river">
+      <div class="river-col">
+        <div class="river-head">
+          <span class="river-title">River Flood — Kedarnath Mountain Gorge</span>
+          <span class="river-tag">Riverbed + flow</span>
+          <span class="river-tag">Baseflow · normal</span>
+        </div>
+        <div class="river-chart">
+          <svg viewBox="0 0 600 110" width="100%" height="100%" preserveAspectRatio="none">
+            <polyline points="0,20 90,34 180,46 260,58 340,66 420,74 500,80 600,86" fill="none" stroke="rgba(148,163,184,0.35)" stroke-width="2"/>
+            <polyline points="0,96 90,97 180,97 260,98 340,98 420,98 500,99 600,99" fill="none" stroke="#5eead4" stroke-width="2.4"/>
+            <circle cx="420" cy="98" r="4" fill="#5eead4"/>
+            <text x="428" y="94" fill="#5eead4" font-size="9" font-family="IBM Plex Mono">Sonprayag choke</text>
+          </svg>
+        </div>
+        <div class="river-labels">
+          <span><b>Kedarnath AWS</b>3583m ASL</span>
+          <span><b>Rambara Gorge</b>2700m ASL</span>
+          <span><b>Sonprayag Choke</b>1929m ASL</span>
+          <span><b>Rudraprayag Outlet</b>610m ASL</span>
+        </div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-box"><span class="stat-name">Rain</span><span class="stat-val">0 mm/h</span></div>
+        <div class="stat-box"><span class="stat-name">Inflow</span><span class="stat-val">180 m³/s</span></div>
+        <div class="stat-box"><span class="stat-name">Slope</span><span class="stat-val">11.4%</span></div>
+        <div class="stat-box"><span class="stat-name">Flow speed</span><span class="stat-val">1.2 m/s</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Gauges: name-first, neutral ring, no severity color ──
+const GAUGES = [
+  { name:"Cloud Moisture", val:34, unit:"mm", max:100, note:"normal level" },
+  { name:"Rainfall Rate", val:0, unit:"mm/h", max:150, note:"no rain" },
+  { name:"Rain Spike", val:0, unit:"mm/h²", max:50, note:"no acceleration" },
+  { name:"Rain, Last 30 min", val:0, unit:"mm", max:80, note:"dry" },
+  { name:"Lightning Strikes", val:4, unit:"/min", max:60, note:"low intensity" },
+  { name:"River Level at Gorge", val:0.4, unit:"m", max:8, note:"safe baseline" },
+];
+const gaugeRow = document.getElementById("gaugeRow");
+const R = 27, C = 2*Math.PI*R;
+GAUGES.forEach(g=>{
+  const pct = Math.min(1, g.val/g.max);
+  const el = document.createElement("div");
+  el.className = "gauge";
+  el.innerHTML = `
+    <div class="gauge-name">${g.name}</div>
+    <div class="gauge-ring">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="gauge-ring-track" cx="32" cy="32" r="${R}"></circle>
+        <circle class="gauge-ring-fill" cx="32" cy="32" r="${R}"
+          stroke-dasharray="${C}" stroke-dashoffset="${C}"></circle>
+      </svg>
+      <div class="gauge-value">
+        <div class="gauge-num">${g.val}</div>
+        <div class="gauge-unit">${g.unit}</div>
+      </div>
+    </div>
+    <div class="gauge-note">${g.note}</div>
+  `;
+  gaugeRow.appendChild(el);
+  requestAnimationFrame(()=>{
+    const fill = el.querySelector(".gauge-ring-fill");
+    fill.style.strokeDashoffset = C - pct*C;
+  });
+});
+
+// ── Branching model-pipeline timeline (extracted & restyled) ──
+const STAGES = [
+  { n:1, name:"Weather & Moisture Sensors", who:"Ambient Telemetry Ingest",
+    action:"Monitoring 40 mountain stations. Sensor is sleeping to save battery.",
+    handoff:"Battery Switch (SNN)", nextLabel:"Hand Over to Battery Switch (SNN) &rarr;" },
+  { n:2, name:"Smart Battery Switch (SNN)", who:"Spiking Neural Wake Gate",
+    action:"Moisture reached 64mm (+7.2 mm/h) 30 minutes before rain started.",
+    handoff:"AI Weather Predictor (Nowcaster)", nextLabel:"Hand Over to AI Nowcaster &rarr;" },
+  { n:3, name:"AI Weather Predictor (Nowcaster)", who:"1D-CNN + BiLSTM Model",
+    action:"Sudden heavy rain spike detected. Sensor woke up from sleep mode.",
+    handoff:"Neighbor Stations Check", nextLabel:"Hand Over to Neighbor Check &rarr;" },
+  { n:4, name:"Neighbor Stations Check", who:"Spatial False-Alarm Filter",
+    action:"Confirmed 98.4% cloudburst — not routine rain — against rain speed.",
+    handoff:"PINN River Flood Simulator", nextLabel:"Hand Over to PINN Flood Sim &rarr;" },
+  { n:5, name:"PINN River Flood Simulator", who:"2D Shallow-Water Solver",
+    action:"Surrounding stations clear. Confirmed real, isolated cloudburst event.",
+    handoff:"Sirens & Emergency Authorities", nextLabel:"Broadcast Evacuation Alert &rarr;" },
+];
+const COORDS = {1:{x:6,y:50},2:{x:30,y:50},3:{x:54,y:50},4:{x:86,y:20},5:{x:86,y:80}};
+const EDGES = [[1,2],[2,3],[3,4],[3,5]];
+const ADJ = {};
+EDGES.forEach(([a,b])=>{ (ADJ[a]=ADJ[a]||[]).push(b); (ADJ[b]=ADJ[b]||[]).push(a); });
+function route(a,b){
+  if(a===b) return [a];
+  const q=[[a]], seen=new Set([a]);
+  while(q.length){
+    const path=q.shift(), node=path[path.length-1];
+    for(const next of (ADJ[node]||[])){
+      if(seen.has(next)) continue;
+      const np=path.concat([next]);
+      if(next===b) return np;
+      seen.add(next); q.push(np);
+    }
+  }
+  return [a,b];
+}
+let current = 1, animToken = 0;
+function animTraveler(from,to){
+  const trav = document.getElementById("metroTraveler");
+  if(from===to){ syncStatic(to); pulse(to); return; }
+  const path = route(from,to);
+  const my = ++animToken;
+  trav.classList.add("moving");
+  const first = COORDS[path[0]];
+  trav.setAttribute("cx", first.x); trav.setAttribute("cy", first.y);
+  let i=0;
+  function seg(){
+    if(my!==animToken) return;
+    if(i>=path.length-1){ trav.classList.remove("moving"); syncStatic(to); pulse(to); return; }
+    const a=COORDS[path[i]], b=COORDS[path[i+1]], dur=380, start=performance.now();
+    function frame(now){
+      if(my!==animToken) return;
+      const t=Math.min(1,(now-start)/dur);
+      const e=t<0.5? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+      trav.setAttribute("cx", a.x+(b.x-a.x)*e);
+      trav.setAttribute("cy", a.y+(b.y-a.y)*e);
+      if(t<1) requestAnimationFrame(frame); else { i++; seg(); }
+    }
+    requestAnimationFrame(frame);
+  }
+  seg();
+}
+function syncStatic(stage){
+  const r = route(1,stage), rs = new Set(r);
+  for(let i=1;i<=5;i++){
+    const el = document.getElementById(`mstation-${i}`);
+    el.classList.remove("active","done");
+    if(rs.has(i)) el.classList.add(i===stage?"active":"done");
+  }
+  document.querySelectorAll(".metro-seg").forEach(s=>s.classList.remove("filled"));
+  for(let i=0;i<r.length-1;i++){
+    const key = `${Math.min(r[i],r[i+1])}-${Math.max(r[i],r[i+1])}`;
+    const seg = document.querySelector(`.metro-seg[data-seg="${key}"]`);
+    if(seg) seg.classList.add("filled");
+  }
+}
+function pulse(stage){
+  const dot = document.querySelector(`#mstation-${stage} .metro-dot`);
+  dot.classList.remove("arrive"); void dot.offsetWidth; dot.classList.add("arrive");
+}
+function setStage(n){
+  if(n<1) n=1; if(n>5) n=5;
+  const prev = current; current = n;
+  const s = STAGES[n-1];
+  document.getElementById("metroStageBadge").textContent = `STAGE ${n} / 5`;
+  document.getElementById("metroWho").textContent = s.who;
+  document.getElementById("metroAction").textContent = s.action;
+  document.getElementById("metroHandoff").textContent = s.handoff;
+  document.getElementById("btnHandoff").innerHTML = n<5 ? s.nextLabel : s.nextLabel;
+  animTraveler(prev, n);
+}
+function step(d){ setStage(current+d); }
+function playDemo(){
+  resetDemo();
+  let i = 1;
+  const btn = document.getElementById("btnPlay");
+  btn.textContent = "Running…";
+  const t = setInterval(()=>{
+    i++;
+    if(i>5){ clearInterval(t); btn.innerHTML = "&#9654; Auto walkthrough"; return; }
+    setStage(i);
+  }, 1600);
+}
+function resetDemo(){ setStage(1); }
+setStage(1);
+
+// clock
+function tick(){
+  const d = new Date();
+  document.getElementById("clock").textContent = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) + " IST";
+}
+tick(); setInterval(tick, 30000);
+</script>
+
+</body>
+</html>

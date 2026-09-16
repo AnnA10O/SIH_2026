@@ -1,0 +1,6 @@
+alpha,gamma,val_csi,best_tau,ckpt_path
+0.25,2.0,0.5011,0.2,d:\SIH\models\mlp_a0.25_g2.0.pt
+0.25,3.0,0.4912,0.3,d:\SIH\models\mlp_a0.25_g3.0.pt
+0.25,4.0,0.5004,0.3,d:\SIH\models\mlp_a0.25_g4.0.pt
+0.5,2.0,0.4971,0.3,d:\SIH\models\mlp_a0.5_g2.0.pt
+0.75,2.0,0.502,0.3,d:\SIH\models\mlp_a0.75_g2.0.pt

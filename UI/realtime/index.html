@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Nowcast</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#090d1a;
+    --bg-map:#0d1526;
+    --panel:rgba(12, 18, 33, 0.86);
+    --border:rgba(82, 110, 165, 0.3);
+    --border-soft:rgba(82, 110, 165, 0.15);
+    --text:#e4ebf5;
+    --text-muted:#8b9bb4;
+    --text-dim:#536380;
+    --tier-green:#3fae72;
+    --tier-yellow:#d9ae3c;
+    --tier-orange:#db7f35;
+    --tier-red:#dd4b4b;
+    --gate-a:#4c8ddb;
+    --gate-b:#9b6fd1;
+    --radius:10px;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Roboto Mono", "Cascadia Code", Menlo, monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:var(--font-ui);
+    background:var(--bg);
+    color:var(--text);
+    overflow:hidden; /* Body shouldn't scroll, screens will handle their own scroll */
+  }
+
+  button, input{font-family:inherit;}
+  button:focus-visible, input:focus-visible{
+    outline:2px solid var(--gate-a);
+    outline-offset:2px;
+  }
+
+  /* ---------- nav toggle ---------- */
+  #nav-toggle{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:1200;
+    display:flex;
+    gap:2px;
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:4px;
+  }
+  .tab{
+    width:36px;height:36px;
+    border-radius:999px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text-muted);
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    transition:color .2s, background .2s;
+  }
+  .tab svg{width:18px;height:18px;}
+  .tab.active{color:var(--bg); background:var(--text);}
+  .tab:hover:not(.active){color:var(--text);}
+
+  /* ---------- screens ---------- */
+  .screen{position:fixed; inset:0; display:none;}
+  .screen.active{display:block;}
+
+  /* ---------- screen 1: map ---------- */
+  #screen-map #map{position:absolute; inset:0; background:var(--bg-map);}
+
+  #sidebar{
+    position:absolute;
+    top:16px; left:16px;
+    z-index:900;
+    width:212px;
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .filter-group{margin-bottom:16px;}
+  .filter-group:last-child{margin-bottom:0;}
+  .filter-label{
+    font-size:11.5px;
+    color:var(--text-muted);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .segmented{
+    display:flex;
+    background:var(--bg-map);
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    padding:3px;
+    gap:2px;
+  }
+  .seg{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--text-muted);
+    font-size:12px;
+    padding:6px 0;
+    border-radius:6px;
+    cursor:pointer;
+    transition:background .2s, color .2s;
+  }
+  .seg.active{background:var(--border); color:var(--text);}
+  .seg:hover:not(.active){color:var(--text);}
+
+  .switch-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:7px 0;
+    font-size:13px;
+    color:var(--text);
+  }
+  .switch{position:relative; width:34px; height:20px; display:inline-block; flex-shrink:0;}
+  .switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
+  .slider{
+    position:absolute; inset:0;
+    background:var(--border-soft);
+    border-radius:999px;
+    transition:background .2s;
+    pointer-events:none;
+  }
+  .slider::before{
+    content:"";
+    position:absolute;
+    width:14px;height:14px;
+    left:3px; top:3px;
+    background:var(--text-muted);
+    border-radius:50%;
+    transition:transform .2s, background .2s;
+  }
+  .switch input:checked + .slider{background:rgba(76,141,219,0.32);}
+  .switch input:checked + .slider::before{transform:translateX(14px); background:var(--gate-a);}
+
+  #live-clock{
+    position:absolute;
+    bottom:16px; left:16px;
+    z-index:900;
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    color:var(--text-muted);
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    padding:7px 11px;
+    border-radius:999px;
+    border:1px solid var(--border);
+  }
+  #live-clock .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--tier-green);
+    animation:dotpulse 2s ease-in-out infinite;
+  }
+  @keyframes dotpulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  .zone-path{
+    transition:fill 700ms ease, fill-opacity 700ms ease, stroke 700ms ease;
+  }
+  .zone-critical{animation:critical-pulse 1.6s ease-in-out infinite;}
+  @keyframes critical-pulse{
+    0%,100%{filter:drop-shadow(0 0 2px var(--tier-red));}
+    50%{filter:drop-shadow(0 0 9px var(--tier-red));}
+  }
+
+  /* ---------- screen 2: feed ---------- */
+  #screen-feed{
+    background: radial-gradient(circle at 50% 30%, #111a30 0%, #060913 100%);
+    overflow-y:auto;
+    -webkit-overflow-scrolling: touch;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    height: 100vh;
+  }
+  
+  /* Particle Canvas & Light Beam */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.8;
+  }
+  .light-beam {
+    position: fixed;
+    top: -20%; left: -20%;
+    width: 140%; height: 140%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 30%, transparent 60%);
+    transform: rotate(-15deg);
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: screen;
+  }
+
+  #feed-wrap{max-width:960px; margin:0 auto; padding:76px 20px 40px; position:relative; z-index:10;}
+
+  table#feed-table{width:100%; border-collapse:collapse; background: rgba(12, 18, 33, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 12px; border: 1px solid var(--border-soft); box-shadow: 0 10px 40px rgba(0,0,0,0.5);}
+  table#feed-table thead th { border-bottom: 2px solid var(--border-soft); }
+  tbody tr{border-bottom:1px solid var(--border-soft); transition: background 0.2s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody td{padding:14px 12px; vertical-align:middle;}
+
+  .status-dot{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--text-dim);
+    transition:background .3s, box-shadow .3s;
+  }
+  .status-dot.flagged{
+    background:var(--tier-red);
+    animation:dotflag 1s ease-in-out infinite;
+  }
+  @keyframes dotflag{
+    0%,100%{box-shadow:0 0 6px 1px rgba(221,75,75,.55);}
+    50%{box-shadow:0 0 14px 4px rgba(221,75,75,.9);}
+  }
+
+  .src-id{font-family:var(--font-mono); font-size:12.5px; color:var(--text); white-space:nowrap;}
+
+  .gate-pair{display:flex; gap:6px;}
+
+  .gate-pill{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:20px;
+    border-radius:6px;
+    font-family:var(--font-mono);
+    font-size:10.5px; font-weight:600;
+    border:1px solid var(--border-soft);
+    background:var(--bg-map);
+    color:var(--text-dim);
+    transition:color .25s, background .25s, border-color .25s, box-shadow .25s, transform .15s;
+    cursor:help;
+  }
+  .gate-pill.fire-a{
+    color:#bcd9f7;
+    background:rgba(76,141,219,0.22);
+    border-color:rgba(76,141,219,0.55);
+    box-shadow:0 0 8px 1px rgba(76,141,219,0.55), 0 0 16px 3px rgba(76,141,219,0.25);
+  }
+  .gate-pill.fire-b{
+    color:#e1d2f6;
+    background:rgba(155,111,209,0.22);
+    border-color:rgba(155,111,209,0.55);
+    box-shadow:0 0 8px 1px rgba(155,111,209,0.55), 0 0 16px 3px rgba(155,111,209,0.25);
+  }
+  .gate-pill.fire-a.flash, .gate-pill.fire-b.flash{ animation:gateflash .5s ease; }
+  @keyframes gateflash{0%{transform:scale(1.18);}100%{transform:scale(1);}}
+
+  /* ---------- accordion rows ---------- */
+  tbody tr.main-row{cursor:pointer; transition:background .15s;}
+  tbody tr.main-row:hover{background:rgba(255,255,255,0.025);}
+
+  .chevron{
+    display:inline-flex; width:14px; height:14px; margin-left:6px;
+    color:var(--text-dim);
+    transition:transform .25s ease, color .25s ease;
+    vertical-align:middle;
+  }
+  tr.main-row.open .chevron{transform:rotate(90deg); color:var(--text-muted);}
+
+  tr.detail-row td{padding:0; border-bottom:1px solid var(--border-soft);}
+  tr.detail-row{border-bottom:none;}
+  .detail-wrap{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  tr.detail-row.open .detail-wrap{max-height:260px;}
+
+  .detail-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px 16px;
+    padding:4px 8px 16px 32px;
+  }
+  .detail-item{
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .detail-label{
+    font-size:10px; text-transform:uppercase; letter-spacing:.03em;
+    color:var(--text-dim);
+  }
+  .detail-value{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--text);
+  }
+
+  @media (max-width:640px){
+    .detail-grid{grid-template-columns:repeat(2, 1fr); padding-left:24px;}
+  }
+
+  .history{display:flex; gap:8px; align-items:center; font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  .chip{
+    font-size:12.5px;
+    padding:4px 8px;
+    border-radius:6px;
+    background:rgba(255, 255, 255, 0.02);
+    color:var(--text-dim);
+    border:1px solid transparent;
+    min-width:44px;
+    text-align:center;
+    transition: all 0.3s ease;
+  }
+  .chip.chip-prev2 { color: rgba(255, 255, 255, 0.25); text-shadow: 0 0 4px rgba(255,255,255,0.1); }
+  .chip.chip-prev1 { color: rgba(255, 255, 255, 0.55); text-shadow: 0 0 6px rgba(255,255,255,0.2); }
+  .chip.current { 
+    color:#ffffff; 
+    border-color:rgba(255,255,255,0.3); 
+    background:rgba(255,255,255,0.08); 
+    font-weight: 600;
+    text-shadow: 0 0 10px rgba(255,255,255,0.4);
+    box-shadow: 0 0 15px rgba(255,255,255,0.05);
+  }
+  .chip.current.flash{animation:chipflash .5s ease;}
+  @keyframes chipflash{0%{background:rgba(255,255,255,0.3); transform:scale(1.05);}100%{background:rgba(255,255,255,0.08); transform:scale(1);}}
+  .chip.current.spike{
+    color:#ff7a7a; 
+    border-color:rgba(221,75,75,0.6); 
+    background:rgba(221,75,75,0.15);
+    text-shadow: 0 0 12px rgba(221,75,75,0.6);
+    box-shadow: 0 0 20px rgba(221,75,75,0.2);
+  }
+
+  .time-cell{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); white-space:nowrap; text-align:right;}
+
+  thead .th-label{
+    font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--text-dim);
+    text-align:left;
+    padding:0 8px 10px;
+    border-bottom:1px solid var(--border-soft);
+  }
+
+  @media (max-width:640px){
+    #sidebar{width:176px; padding:12px;}
+    .filter-label{font-size:11px;}
+    #feed-wrap{padding:68px 12px 32px;}
+    .chip{min-width:36px; font-size:11.5px; padding:3px 5px;}
+    .src-id{font-size:11.5px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .zone-critical, .status-dot.flagged, #live-clock .dot, .chip.current.flash{animation:none !important;}
+    .zone-path{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+  <div id="nav-toggle">
+    <button id="tab-map" class="tab active" aria-label="Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+    </button>
+    <button id="tab-feed" class="tab" aria-label="Feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,13 7,13 9,7 13,19 16,13 22,13"/></svg>
+    </button>
+  </div>
+
+  <section id="screen-map" class="screen active">
+    <div id="map"></div>
+
+    <aside id="sidebar">
+      <div class="filter-group">
+        <div class="filter-label">Basemap</div>
+        <div class="segmented">
+          <button class="seg active" data-base="street">Street</button>
+          <button class="seg" data-base="satellite">Satellite</button>
+          <button class="seg" data-base="terrain">Terrain</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Stations</div>
+        <label class="switch-row">
+          <span>AWS</span>
+          <span class="switch"><input type="checkbox" id="toggle-aws" checked><span class="slider"></span></span>
+        </label>
+        <label class="switch-row">
+          <span>Satellite</span>
+          <span class="switch"><input type="checkbox" id="toggle-sat" checked><span class="slider"></span></span>
+        </label>
+      </div>
+    </aside>
+
+    <div id="live-clock"><span class="dot"></span><span id="clock-text">--:--:--</span></div>
+  </section>
+
+  <section id="screen-feed" class="screen">
+    <div id="bg-canvas-container" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;">
+        <canvas id="bg-canvas"></canvas>
+        <div class="light-beam"></div>
+    </div>
+    <div id="feed-wrap">
+      <table id="feed-table">
+        <thead>
+          <tr>
+            <th style="width:24px;"></th>
+            <th class="th-label">Station</th>
+            <th class="th-label" colspan="2">SNN</th>
+            <th class="th-label">CNN Prob</th>
+            <th class="th-label" style="text-align:right;">Time</th>
+          </tr>
+        </thead>
+        <tbody id="feed-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+<script>
+(function(){
+
+  /* ================= nav toggle ================= */
+  var tabMap = document.getElementById('tab-map');
+  var tabFeed = document.getElementById('tab-feed');
+  var screenMap = document.getElementById('screen-map');
+  var screenFeed = document.getElementById('screen-feed');
+
+  function showScreen(name){
+    if(name === 'map'){
+      screenMap.classList.add('active');
+      screenFeed.classList.remove('active');
+      tabMap.classList.add('active');
+      tabFeed.classList.remove('active');
+      requestAnimationFrame(function(){ map.invalidateSize(); });
+    } else {
+      screenFeed.classList.add('active');
+      screenMap.classList.remove('active');
+      tabFeed.classList.add('active');
+      tabMap.classList.remove('active');
+    }
+  }
+  tabMap.addEventListener('click', function(){ showScreen('map'); });
+  tabFeed.addEventListener('click', function(){ showScreen('feed'); });
+
+  /* ================= map init ================= */
+  var map = L.map('map', { zoomControl:false, attributionControl:true }).setView([28.5,86],5);
+  L.control.zoom({ position:'bottomright' }).addTo(map);
+
+  var basemaps = {
+    street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom:18, attribution:'&copy; OpenStreetMap contributors'
+    }),
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom:18, attribution:'Tiles &copy; Esri'
+    }),
+    terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom:17, attribution:'Map data: &copy; OpenStreetMap contributors, SRTM | Style: &copy; OpenTopoMap (CC-BY-SA)'
+    })
+  };
+  basemaps.street.addTo(map);
+
+  document.querySelectorAll('.seg').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.seg').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      Object.keys(basemaps).forEach(function(k){ map.removeLayer(basemaps[k]); });
+      basemaps[btn.dataset.base].addTo(map);
+    });
+  });
+
+  /* ================= stations ================= */
+  var awsGroup = L.layerGroup().addTo(map);
+  var satGroup = L.layerGroup().addTo(map);
+  var allBounds = [];
+
+  // Map markers track by ID so we don't duplicate them
+  var renderedMarkers = {};
+
+  document.getElementById('toggle-aws').addEventListener('change', function(e){
+    if(e.target.checked) awsGroup.addTo(map); else map.removeLayer(awsGroup);
+  });
+  document.getElementById('toggle-sat').addEventListener('change', function(e){
+    if(e.target.checked) satGroup.addTo(map); else map.removeLayer(satGroup);
+  });
+
+  /* ================= live clock ================= */
+  function tickClock(){
+    document.getElementById('clock-text').textContent =
+      new Date().toLocaleTimeString('en-GB', { hour12:false });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  /* ================= feed screen ================= */
+  var feedBody = document.getElementById('feed-body');
+  var state = {};
+
+  // Keys already surfaced in the main row / not useful raw metrics.
+  var DETAIL_SKIP_KEYS = { id:1, gate:1, gate_a:1, gate_b:1, P_CB:1, pinn:1 };
+
+  function prettyLabel(key){
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+  }
+
+  function fmtDetailVal(v, key){
+    if(v == null) return '\u2014';
+    
+    if (key === 'tier') {
+        var t = String(v).toLowerCase();
+        var color = 'var(--text)';
+        if(t === 'red') color = 'var(--tier-red)';
+        else if(t === 'orange') color = 'var(--tier-orange)';
+        else if(t === 'yellow') color = 'var(--tier-yellow)';
+        else if(t === 'green') color = 'var(--tier-green)';
+        return '<span style="color:' + color + '; font-weight:700; text-transform:uppercase; text-shadow: 0 0 8px ' + color + ';">' + t + '</span>';
+    }
+    
+    if (key === 'sat_degraded') {
+        var isDegraded = (v === true || v === 'true');
+        if (isDegraded) {
+            return '<span class="chip current spike" style="display:inline-block; margin:0;">DEGRADED</span>';
+        } else {
+            return '<span class="chip current" style="display:inline-block; margin:0;">HEALTHY</span>';
+        }
+    }
+
+    if(typeof v === 'number') return (v % 1 === 0) ? String(v) : v.toFixed(3);
+    if(typeof v === 'boolean') return v ? 'true' : 'false';
+    return String(v);
+  }
+
+  function renderDetailGrid(chId, res){
+    var grid = document.getElementById('detail-grid-'+chId);
+    if(!grid) return;
+    var html = '';
+    Object.keys(res).forEach(function(key){
+      if(DETAIL_SKIP_KEYS[key]) return;
+      if (key === 'metrics') {
+        Object.keys(res.metrics).forEach(function(mKey){
+          html += '<div class="detail-item"><span class="detail-label">'+prettyLabel(mKey)+'</span>' +
+                  '<span class="detail-value">'+fmtDetailVal(res.metrics[mKey], mKey)+'</span></div>';
+        });
+      } else {
+        html += '<div class="detail-item"><span class="detail-label">'+prettyLabel(key)+'</span>' +
+                '<span class="detail-value">'+fmtDetailVal(res[key], key)+'</span></div>';
+      }
+    });
+    grid.innerHTML = html || '<div class="detail-item"><span class="detail-value">No additional metrics.</span></div>';
+  }
+
+  function toggleRow(chId){
+    var mainRow = document.getElementById('row-'+chId);
+    var detailRow = document.getElementById('detail-row-'+chId);
+    var isOpen = mainRow.classList.toggle('open');
+    detailRow.classList.toggle('open', isOpen);
+  }
+
+  function initStationRow(ch){
+       var row = document.createElement('tr');
+       row.className = 'main-row';
+       row.id = 'row-'+ch.id;
+       row.innerHTML =
+         '<td style="width:24px;"><span class="status-dot" id="dot-'+ch.id+'"></span></td>' +
+         '<td class="src-id">'+ch.id+
+           '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>' +
+         '</td>' +
+         '<td style="width:30px;"><span class="gate-pill" id="gate-a-'+ch.id+'" title="Gate A · Cloudburst (fast temporal)">A</span></td>' +
+         '<td style="width:30px;"><span class="gate-pill" id="gate-b-'+ch.id+'" title="Gate B · Thunderstorm (spatial/synoptic)">B</span></td>' +
+         '<td>' +
+           '<div class="history">' +
+             '<span class="chip chip-prev2" id="prev2-'+ch.id+'">&#8212;</span>' +
+             '<span class="chip chip-prev1" id="prev1-'+ch.id+'">&#8212;</span>' +
+             '<span class="chip current" id="cur-'+ch.id+'">Loading...</span>' +
+           '</div>' +
+         '</td>' +
+         '<td class="time-cell" id="time-'+ch.id+'">&#8212;&#8212;:&#8212;&#8212;:&#8212;&#8212;</td>';
+       row.addEventListener('click', function(){ toggleRow(ch.id); });
+       feedBody.appendChild(row);
+
+       var detailRow = document.createElement('tr');
+       detailRow.className = 'detail-row';
+       detailRow.id = 'detail-row-'+ch.id;
+       detailRow.innerHTML =
+         '<td colspan="6"><div class="detail-wrap"><div class="detail-grid" id="detail-grid-'+ch.id+'"></div></div></td>';
+       feedBody.appendChild(detailRow);
+
+       state[ch.id] = { prev2:null, prev1:null, cur:null };
+  }
+
+  function addMapMarker(id, lat, lon, isSat) {
+      if (!lat || !lon || renderedMarkers[id]) return;
+      var p = [parseFloat(lat), parseFloat(lon)];
+      
+      var m = L.circleMarker(p, {
+        radius:4, weight:1.5, interactive:true,
+        color: isSat ? '#c7abec' : '#8fc3ef', 
+        fillColor: isSat ? '#9b6fd1' : '#4c8ddb', 
+        fillOpacity:0.9
+      }).bindTooltip(id);
+      
+      if(isSat) m.addTo(satGroup); else m.addTo(awsGroup);
+      renderedMarkers[id] = m;
+
+      allBounds.push(p);
+      if(allBounds.length > 1) map.fitBounds(allBounds, { padding:[40,40] });
+      else map.setView(p, 6);
+  }
+
+  function fmtVal(v){ return v.toFixed(2); }
+
+  function updateStationFeed(res){
+    var chId = res.id;
+    if(!state[chId]){
+        initStationRow({id: chId, gate: res.gate});
+    }
+
+    // Dynamic Map Marker
+    if(res.metrics && res.metrics.lat && res.metrics.lon) {
+        addMapMarker(chId, res.metrics.lat, res.metrics.lon, chId.includes("SAT"));
+    }
+
+    // Two independent SNN gates. Falls back to the legacy single `gate`
+    // string (e.g. from older API payloads) if gate_a/gate_b aren't present.
+    var gateA = (typeof res.gate_a === 'boolean') ? res.gate_a : (res.gate === 'a');
+    var gateB = (typeof res.gate_b === 'boolean') ? res.gate_b : (res.gate === 'b');
+
+    var pillA = document.getElementById('gate-a-'+chId);
+    var pillB = document.getElementById('gate-b-'+chId);
+    if(pillA){
+      var wasA = pillA.classList.contains('fire-a');
+      pillA.classList.toggle('fire-a', gateA);
+      if(gateA && !wasA){
+        pillA.classList.remove('flash'); void pillA.offsetWidth; pillA.classList.add('flash');
+      }
+    }
+    if(pillB){
+      var wasB = pillB.classList.contains('fire-b');
+      pillB.classList.toggle('fire-b', gateB);
+      if(gateB && !wasB){
+        pillB.classList.remove('flash'); void pillB.offsetWidth; pillB.classList.add('flash');
+      }
+    }
+
+    renderDetailGrid(chId, res);
+
+    var s = state[chId];
+    var v = res.P_CB;
+    if(s.cur !== v) {
+        s.prev2 = s.prev1;
+        s.prev1 = s.cur;
+        s.cur = v;
+
+        document.getElementById('prev2-'+chId).textContent = s.prev2 != null ? fmtVal(s.prev2) : '\u2014';
+        document.getElementById('prev1-'+chId).textContent = s.prev1 != null ? fmtVal(s.prev1) : '\u2014';
+
+        var curEl = document.getElementById('cur-'+chId);
+        curEl.textContent = fmtVal(s.cur);
+
+        var flagged = v >= 0.85; // red tier
+        curEl.classList.toggle('spike', flagged);
+        curEl.classList.remove('flash');
+        void curEl.offsetWidth;
+        curEl.classList.add('flash');
+
+        document.getElementById('time-'+chId).textContent = new Date().toLocaleTimeString('en-GB', { hour12:false });
+
+        var dot = document.getElementById('dot-'+chId);
+        if(flagged){
+          dot.classList.add('flagged');
+          clearTimeout(dot._t);
+          dot._t = setTimeout(function(){ dot.classList.remove('flagged'); }, 4200);
+        }
+    }
+  }
+
+  function fetchLiveNowcast(){
+      fetch('/api/nowcast')
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(res => {
+                updateStationFeed(res);
+            });
+        })
+        .catch(err => console.error("Error fetching nowcast:", err));
+  }
+
+  fetchLiveNowcast();
+  setInterval(fetchLiveNowcast, 5000);
+
+  /* ================= particles ================= */
+  var canvas = document.getElementById('bg-canvas');
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var pCount = 150;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  for(var i=0; i<pCount; i++){
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.2) * 0.5,
+      vy: (Math.random() - 0.8) * 0.5,
+      size: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.5 + 0.1
+    });
+  }
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(var i=0; i<pCount; i++){
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      if(p.x < 0) p.x = canvas.width;
+      if(p.x > canvas.width) p.x = 0;
+      if(p.y < 0) p.y = canvas.height;
+      if(p.y > canvas.height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + p.alpha + ')';
+      ctx.fill();
+    }
+    requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+})();
+</script>
+</body>
+</html>
