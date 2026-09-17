@@ -80,6 +80,14 @@ class InferenceOrchestrator:
         else:
             logging.warning("PINN SWE checkpoint not found. Using untrained weights.")
 
+    def get_basin_for_station(self, stn_id: str) -> str:
+        basin_map = {
+            'UK-1': 'rudraprayag', 'UK-2': 'chamoli', 'UK-3': 'uttarkashi',
+            'UK-4': 'pithoragarh', 'UK-5': 'tehri', 'UK-6': 'pauri', 
+            'UK-7': 'nainital', 'UK-8': 'almora'
+        }
+        return basin_map.get(stn_id, 'rudraprayag')
+
     def predict_nowcast(self):
         results = []
         
@@ -97,57 +105,6 @@ class InferenceOrchestrator:
             data["lat"] = stn["lat"]
             data["lon"] = stn["lng"]
             
-            if self.cnn is not None:
-                x_raw = np.zeros(len(self.ordered_feats))
-                for i, f in enumerate(self.ordered_feats):
-                    # Static/Metadata fields bypass the buffer
-                    if f in ['lat', 'lon', 'doy', 'month', 'spatial_contrast', 'rain_3day_accum', 'rain_7day_accum', 'rain_trend_7day']:
-                        if f in data: x_raw[i] = data[f]
-                    
-                    # Buffer-managed staleness and validity flags for AWS
-                    elif f == 'R_staleness_s':
-                        state = self.buffer.get_channel_state(stn_id, 'R')
-                        x_raw[i] = state.staleness_s if state.staleness_s != float('inf') else 0.0
-                    elif f == 'R_valid':
-                        x_raw[i] = 1.0 if self.buffer.get_channel_state(stn_id, 'R').valid else 0.0
-                    
-                    # Buffer-managed staleness and validity flags for Satellite (MOSDAC)
-                    elif f == 'uth_staleness_s':
-                        state = self.buffer.get_channel_state(stn_id, 'uth_kalpana')
-                        x_raw[i] = state.staleness_s if state.staleness_s != float('inf') else 0.0
-                    elif f == 'uth_valid':
-                        x_raw[i] = 1.0 if self.buffer.get_channel_state(stn_id, 'uth_kalpana').valid else 0.0
-                    elif f == 'hem_staleness_s':
-                        state = self.buffer.get_channel_state(stn_id, 'hem_kalpana')
-                        x_raw[i] = state.staleness_s if state.staleness_s != float('inf') else 0.0
-                    elif f == 'hem_valid':
-                        x_raw[i] = 1.0 if self.buffer.get_channel_state(stn_id, 'hem_kalpana').valid else 0.0
-                    
-                    # Direct reading values (R, R_30, R_60, RI)
-                    else:
-                        state = self.buffer.get_channel_state(stn_id, f)
-                        x_raw[i] = state.value if state.value is not None else 0.0
-                
-                # Forward Pass
-                x_norm = (x_raw - self.scaler_mean) / self.scaler_scale
-                # NaN guard in case scaler is broken
-                x_norm = np.nan_to_num(x_norm, nan=0.0) 
-                x_t = torch.tensor(x_norm, dtype=torch.float32, device=DEVICE).unsqueeze(0)
-                
-                with torch.no_grad():
-                    prob = self.cnn.predict_proba(x_t).item()
-            else:
-                prob = random.uniform(0, 1)
-
-            if prob >= 0.85: tier = "red"
-            elif prob >= 0.60: tier = "orange"
-            elif prob >= 0.35: tier = "yellow"
-            else: tier = "green"
-
-            # Check if any crucial satellite data is DEGRADED (for UI warnings)
-            uth_state = self.buffer.get_channel_state(stn_id, 'uth_kalpana')
-            is_degraded = uth_state.degraded
-            
             # Retrieve or initialize SNN Gates for this specific station
             if stn_id not in self.snn_gates:
                 self.snn_gates[stn_id] = (CloudburstSNNGate(), ThunderstormSNNGate())
@@ -160,11 +117,11 @@ class InferenceOrchestrator:
             gate_a = gate_a_res["fired_spike"]
 
             # Gate B: Neuromorphic Thunderstorm SNN (Spatial/Synoptic)
-            # In absence of full atmospheric telemetry, we proxy with UTH and Spatial Contrast
+            uth_state = self.buffer.get_channel_state(stn_id, 'uth_kalpana')
             uth_val = uth_state.value if uth_state.value is not None else 0.0
             sc_val = data.get('spatial_contrast', 0.0)
             gate_b_res = ts_gate.evaluate({
-                "IWV_trend": (uth_val / 100.0) * 5.0,  # Proxy IWV trend
+                "IWV_trend": (uth_val / 100.0) * 5.0,
                 "pressure_trend": (sc_val / 10.0) * 3.0,
                 "wind_shift": 0.0,
                 "temp_drop": 0.0,
@@ -172,9 +129,58 @@ class InferenceOrchestrator:
             })
             gate_b = gate_b_res["fired_spike"]
 
+            # Only run the heavy CNN if one of the SNN gates fired
+            prob = 0.0
+            if gate_a or gate_b:
+                if self.cnn is not None:
+                    x_raw = np.zeros(len(self.ordered_feats))
+                    for i, f in enumerate(self.ordered_feats):
+                        if f in ['lat', 'lon', 'doy', 'month', 'spatial_contrast', 'rain_3day_accum', 'rain_7day_accum', 'rain_trend_7day']:
+                            if f in data: x_raw[i] = data[f]
+                        elif f == 'R_staleness_s':
+                            state = self.buffer.get_channel_state(stn_id, 'R')
+                            x_raw[i] = state.staleness_s if state.staleness_s != float('inf') else 0.0
+                        elif f == 'R_valid':
+                            x_raw[i] = 1.0 if self.buffer.get_channel_state(stn_id, 'R').valid else 0.0
+                        elif f == 'uth_staleness_s':
+                            state = self.buffer.get_channel_state(stn_id, 'uth_kalpana')
+                            x_raw[i] = state.staleness_s if state.staleness_s != float('inf') else 0.0
+                        elif f == 'uth_valid':
+                            x_raw[i] = 1.0 if self.buffer.get_channel_state(stn_id, 'uth_kalpana').valid else 0.0
+                        elif f == 'hem_staleness_s':
+                            state = self.buffer.get_channel_state(stn_id, 'hem_kalpana')
+                            x_raw[i] = state.staleness_s if state.staleness_s != float('inf') else 0.0
+                        elif f == 'hem_valid':
+                            x_raw[i] = 1.0 if self.buffer.get_channel_state(stn_id, 'hem_kalpana').valid else 0.0
+                        else:
+                            state = self.buffer.get_channel_state(stn_id, f)
+                            x_raw[i] = state.value if state.value is not None else 0.0
+                    
+                    x_norm = (x_raw - self.scaler_mean) / self.scaler_scale
+                    x_norm = np.nan_to_num(x_norm, nan=0.0) 
+                    x_t = torch.tensor(x_norm, dtype=torch.float32, device=DEVICE).unsqueeze(0)
+                    
+                    with torch.no_grad():
+                        prob = self.cnn.predict_proba(x_t).item()
+                else:
+                    prob = random.uniform(0.5, 1)
+
+            if prob >= 0.85: tier = "red"
+            elif prob >= 0.60: tier = "orange"
+            elif prob >= 0.35: tier = "yellow"
+            else: tier = "green"
+
+            # Check if any crucial satellite data is DEGRADED (for UI warnings)
+            is_degraded = uth_state.degraded
+
             r_state = self.buffer.get_channel_state(stn_id, 'R')
             is_virtual = r_state.is_virtual
-            nearest_stn_dist_km = r_state.nearest_stn_dist_km
+            nearest_stn_dist_km = float(r_state.nearest_stn_dist_km) if r_state.nearest_stn_dist_km is not None else 0.0
+
+            # Ensure actual IDW/Physical values are passed to frontend metrics
+            # Ensure actual IDW/Physical values are passed to frontend metrics
+            data["rain"] = float(r_state.value) if r_state.value is not None else 0.0
+            data["rain_intensity"] = float(self.buffer.get_channel_state(stn_id, 'RI').value or 0.0)
 
             stn_res = {
                 "id": stn_id,
@@ -192,7 +198,14 @@ class InferenceOrchestrator:
 
             if tier == "red" and not is_virtual:
                 logging.warning(f"RED ALERT at {stn_id}. Triggering PINN SWE Flash Flood Simulation...")
-                sim_res = self.pinn.simulate_inundation(hazard_type="cloudburst", eval_time_hr=1.0)
+                region = self.get_basin_for_station(stn_id)
+                rain_int = data.get("rain_intensity", 60.0)
+                sim_res = self.pinn.simulate_inundation(
+                    hazard_type="cloudburst", 
+                    eval_time_hr=1.0,
+                    region=region,
+                    rain_intensity=rain_int
+                )
                 stn_res["pinn"] = sim_res
 
             results.append(stn_res)

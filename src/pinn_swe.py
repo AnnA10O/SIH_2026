@@ -43,6 +43,125 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+BASIN_ANCHORS = {
+  "rudraprayag": [
+    {"name": "Kedarnath Peak", "lat": 30.7700, "lon": 79.0600, "elev": 6940, "y": 0.05, "type": "mountain"},
+    {"name": "Chaukhamba", "lat": 30.7400, "lon": 79.2800, "elev": 7138, "y": 0.25, "type": "mountain"},
+    {"name": "Kedarnath Shrine", "lat": 30.7346, "lon": 79.0669, "elev": 3583, "y": 0.00},
+    {"name": "Upper Mandakini", "lat": 30.7150, "lon": 79.0600, "elev": 3100, "y": 0.12},
+    {"name": "Rambara Gorge", "lat": 30.6800, "lon": 79.0400, "elev": 2700, "y": 0.28},
+    {"name": "Gaurikund", "lat": 30.6520, "lon": 79.0230, "elev": 1980, "y": 0.42},
+    {"name": "Sonprayag Choke", "lat": 30.6240, "lon": 79.0030, "elev": 1829, "y": 0.55},
+    {"name": "Phata Bend", "lat": 30.5750, "lon": 79.0300, "elev": 1500, "y": 0.68},
+    {"name": "Guptkashi Loop", "lat": 30.5250, "lon": 79.0780, "elev": 1319, "y": 0.78},
+    {"name": "Chandrapuri", "lat": 30.4300, "lon": 79.0550, "elev": 860, "y": 0.86},
+    {"name": "Tilwara Bend", "lat": 30.3400, "lon": 78.9850, "elev": 700, "y": 0.93},
+    {"name": "Rudraprayag Confluence", "lat": 30.2849, "lon": 78.9814, "elev": 610, "y": 1.00}
+  ],
+  "chamoli": [
+    {"name": "Nanda Devi", "lat": 30.3700, "lon": 79.9700, "elev": 7816, "y": 0.30, "type": "mountain"},
+    {"name": "Trisul", "lat": 30.3100, "lon": 79.7700, "elev": 7120, "y": 0.70, "type": "mountain"},
+    {"name": "Badrinath Shrine", "lat": 30.7433, "lon": 79.4938, "elev": 3133, "y": 0.00},
+    {"name": "Govindghat", "lat": 30.6250, "lon": 79.5600, "elev": 1820, "y": 0.25},
+    {"name": "Joshimath Town", "lat": 30.5546, "lon": 79.5643, "elev": 1875, "y": 0.40},
+    {"name": "Tapovan Barrage", "lat": 30.5667, "lon": 79.5333, "elev": 1350, "y": 0.55},
+    {"name": "Helang Gorge", "lat": 30.5100, "lon": 79.4900, "elev": 1200, "y": 0.70},
+    {"name": "Pipalkoti", "lat": 30.4300, "lon": 79.4300, "elev": 1050, "y": 0.85},
+    {"name": "Chamoli HQ", "lat": 30.4024, "lon": 79.3323, "elev": 950, "y": 1.00}
+  ],
+  "uttarkashi": [
+    {"name": "Mount Shivling", "lat": 30.8700, "lon": 79.0600, "elev": 6543, "y": 0.10, "type": "mountain"},
+    {"name": "Bhagirathi II", "lat": 30.8900, "lon": 79.1400, "elev": 6512, "y": 0.40, "type": "mountain"},
+    {"name": "Gangotri Glacier", "lat": 30.9946, "lon": 78.9398, "elev": 3048, "y": 0.00},
+    {"name": "Harsil Valley", "lat": 31.0300, "lon": 78.7300, "elev": 2620, "y": 0.25},
+    {"name": "Bhatwari Bend", "lat": 30.8100, "lon": 78.6000, "elev": 1600, "y": 0.45},
+    {"name": "Maneri Dam", "lat": 30.8667, "lon": 78.7833, "elev": 1320, "y": 0.60},
+    {"name": "Uttarkashi HQ", "lat": 30.7268, "lon": 78.4354, "elev": 1165, "y": 0.75},
+    {"name": "Chinyalisaur", "lat": 30.5500, "lon": 78.3200, "elev": 850, "y": 0.88},
+    {"name": "Tehri Reservoir", "lat": 30.3783, "lon": 78.4805, "elev": 650, "y": 1.00}
+  ],
+  "pithoragarh": [
+    {"name": "Panchachuli", "lat": 30.2100, "lon": 80.5200, "elev": 6904, "y": 0.15, "type": "mountain"},
+    {"name": "Nanda Kot", "lat": 30.2700, "lon": 80.0600, "elev": 6861, "y": 0.40, "type": "mountain"},
+    {"name": "Munsiari Alpine Slope", "lat": 30.0668, "lon": 80.2374, "elev": 2200, "y": 0.00},
+    {"name": "Madkot Gorge", "lat": 29.9800, "lon": 80.3800, "elev": 1450, "y": 0.30},
+    {"name": "Dharchula Ravine", "lat": 29.8452, "lon": 80.5423, "elev": 915, "y": 0.55},
+    {"name": "Balwakot", "lat": 29.7700, "lon": 80.4500, "elev": 750, "y": 0.80},
+    {"name": "Jauljibi Confluence", "lat": 29.7167, "lon": 80.3667, "elev": 600, "y": 1.00}
+  ],
+  "tehri": [
+    {"name": "Jaonli", "lat": 30.8500, "lon": 78.8500, "elev": 6632, "y": 0.20, "type": "mountain"},
+    {"name": "Khatling Glacier", "lat": 30.8667, "lon": 78.9333, "elev": 2500, "y": 0.00},
+    {"name": "Gangi Valley", "lat": 30.6500, "lon": 78.8200, "elev": 2100, "y": 0.25},
+    {"name": "Ghuttu Valley", "lat": 30.5300, "lon": 78.7500, "elev": 1600, "y": 0.45},
+    {"name": "Ghali Bend", "lat": 30.4400, "lon": 78.6000, "elev": 1200, "y": 0.65},
+    {"name": "New Tehri Town", "lat": 30.3841, "lon": 78.4802, "elev": 1550, "y": 0.80},
+    {"name": "Devprayag Confluence", "lat": 30.1462, "lon": 78.5978, "elev": 520, "y": 1.00}
+  ],
+  "pauri": [
+    {"name": "Pauri HQ", "lat": 30.1462, "lon": 78.7642, "elev": 1800, "y": 0.00},
+    {"name": "Srinagar Garhwal", "lat": 30.2280, "lon": 78.7803, "elev": 560, "y": 0.30},
+    {"name": "Kirtinagar", "lat": 30.2200, "lon": 78.7300, "elev": 540, "y": 0.50},
+    {"name": "Devprayag", "lat": 30.1462, "lon": 78.5978, "elev": 472, "y": 0.70},
+    {"name": "Kaudiyala Gorge", "lat": 30.0700, "lon": 78.4200, "elev": 400, "y": 0.85},
+    {"name": "Rishikesh", "lat": 30.0869, "lon": 78.2676, "elev": 350, "y": 1.00}
+  ],
+  "nainital": [
+    {"name": "Nainital Town", "lat": 29.3919, "lon": 79.4542, "elev": 2084, "y": 0.00},
+    {"name": "Bhowali", "lat": 29.3800, "lon": 79.5200, "elev": 1654, "y": 0.15},
+    {"name": "Bhimtal", "lat": 29.3486, "lon": 79.5528, "elev": 1371, "y": 0.30},
+    {"name": "Amritpur", "lat": 29.2800, "lon": 79.5500, "elev": 600, "y": 0.55},
+    {"name": "Kathgodam", "lat": 29.2667, "lon": 79.5333, "elev": 554, "y": 0.70},
+    {"name": "Haldwani", "lat": 29.2183, "lon": 79.5126, "elev": 424, "y": 0.85},
+    {"name": "Rudrapur (Terai)", "lat": 28.9800, "lon": 79.4000, "elev": 280, "y": 1.00}
+  ],
+  "almora": [
+    {"name": "Binsar Ridge", "lat": 29.7000, "lon": 79.7200, "elev": 2420, "y": 0.00},
+    {"name": "Almora HQ", "lat": 29.5892, "lon": 79.6467, "elev": 1650, "y": 0.20},
+    {"name": "Hawalbagh", "lat": 29.6300, "lon": 79.6200, "elev": 1100, "y": 0.35},
+    {"name": "Someshwar Gorge", "lat": 29.7800, "lon": 79.6100, "elev": 750, "y": 0.50},
+    {"name": "Kausani Edge", "lat": 29.8400, "lon": 79.5900, "elev": 1890, "y": 0.70},
+    {"name": "Garur Valley", "lat": 29.8800, "lon": 79.6100, "elev": 950, "y": 0.85},
+    {"name": "Bajnath Confluence", "lat": 29.9100, "lon": 79.6200, "elev": 1125, "y": 1.00}
+  ]
+}
+
+def extract_flooded_polygon(h_m, region_key, grid_res_m):
+    anchors = BASIN_ANCHORS.get(region_key, BASIN_ANCHORS["rudraprayag"])
+    anchors = sorted(anchors, key=lambda a: a['y'])
+    
+    y_vals = np.array([a['y'] for a in anchors])
+    lats = np.array([a['lat'] for a in anchors])
+    lons = np.array([a['lon'] for a in anchors])
+    
+    ny, nx = h_m.shape
+    left_coords = []
+    right_coords = []
+    
+    domain_width_deg = (nx * grid_res_m) / 111000.0
+    
+    for i in range(ny):
+        row = h_m[i, :]
+        flooded_cols = np.where(row > 0.1)[0]  # Detect water depth > 0.1m
+        if len(flooded_cols) > 0:
+            min_x = flooded_cols[0]
+            max_x = flooded_cols[-1]
+            
+            y_norm = i / max(1, (ny - 1))
+            center_lat = float(np.interp(y_norm, y_vals, lats))
+            center_lon = float(np.interp(y_norm, y_vals, lons))
+            
+            left_offset = ((min_x / max(1, (nx - 1))) - 0.5) * domain_width_deg
+            right_offset = ((max_x / max(1, (nx - 1))) - 0.5) * domain_width_deg
+            
+            left_coords.append([center_lat, center_lon + left_offset])
+            right_coords.insert(0, [center_lat, center_lon + right_offset])
+            
+    if not left_coords:
+        return []
+        
+    return left_coords + right_coords
+
 ROOT = Path(__file__).resolve().parent.parent
 
 # Physical constants
@@ -395,7 +514,8 @@ class SharedSWEPINN:
     def simulate_inundation(self, hazard_type: str = "cloudburst",
                             grid_res_m: float = 400.0,
                             eval_time_hr: float = 1.0,
-                            region: str = "rudraprayag") -> Dict:
+                            region: str = "rudraprayag",
+                            rain_intensity: float = 60.0) -> Dict:
         """
         Run forward simulation over the specified Uttarakhand valley domain.
         Supports 4 major Uttarakhand regions:
@@ -534,20 +654,31 @@ class SharedSWEPINN:
         u_base = (u_tilde_out * SCALE_U0).cpu().numpy().reshape(ny, nx)
         v_base = (v_tilde_out * SCALE_U0).cpu().numpy().reshape(ny, nx)
 
-        h_m = h_base * h_mult * choke_effect
-        u_ms = u_base * u_mult
-        v_ms = v_base * u_mult
+        # Scale physics dynamically based on real-time cloudburst severity
+        severity_scalar = (rain_intensity / 60.0) ** 1.2
+        
+        h_m = h_base * h_mult * choke_effect * severity_scalar
+        u_ms = u_base * u_mult * (severity_scalar ** 0.5)
+        v_ms = v_base * u_mult * (severity_scalar ** 0.5)
 
         peak_depth = float(np.max(h_m))
         mean_depth = float(np.mean(h_m))
-        flooded_area_km2 = float(spec.get("corridor_area_km2", 24.5))
         peak_velocity = float(np.max(np.sqrt(u_ms**2 + v_ms**2)))
+        
+        # Mathematically calculate flooded area (cells with > 0.5m of water)
+        cell_area_km2 = (grid_res_m ** 2) / 1000000.0
+        flooded_cells = np.sum(h_m > 0.5)
+        flooded_area_km2 = float(flooded_cells * cell_area_km2)
+        if flooded_area_km2 == 0:
+            flooded_area_km2 = float(spec.get("corridor_area_km2", 24.5))
         
         # Calculate Time to Peak Inundation (ETA) based on flash flood wave celerity
         # Time = Distance / Velocity. We use domain_km and average flood wave speed.
         wave_celerity_m_s = peak_velocity * 1.2  # Flood wave travels faster than mean velocity
         time_to_peak_seconds = (domain_km * 1000.0) / wave_celerity_m_s
         time_to_peak_mins = int(round(time_to_peak_seconds / 60.0))
+
+        flooded_polygon = extract_flooded_polygon(h_m, region, grid_res_m)
 
         return {
             "region_key": region,
@@ -566,7 +697,8 @@ class SharedSWEPINN:
             "elevation_grid": z_m.round(1).tolist(),
             "water_depth_grid": h_m.round(3).tolist(),
             "velocity_u_grid": u_ms.round(2).tolist(),
-            "velocity_v_grid": v_ms.round(2).tolist()
+            "velocity_v_grid": v_ms.round(2).tolist(),
+            "flooded_polygon_latlons": flooded_polygon
         }
 
     def simulate_all_uttarakhand_regions(self) -> Dict[str, Dict]:

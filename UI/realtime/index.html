@@ -439,6 +439,7 @@
             <th class="th-label">CNN Prob</th>
             <th class="th-label">Risk Score</th>
             <th class="th-label" style="text-align:right;">Time</th>
+            <th style="width:140px;"></th>
           </tr>
         </thead>
         <tbody id="feed-body"></tbody>
@@ -600,7 +601,7 @@
        row.id = 'row-'+ch.id;
        row.innerHTML =
          '<td style="width:24px;"><span class="status-dot" id="dot-'+ch.id+'"></span></td>' +
-         '<td class="src-id"><strong>' + expandStationName(ch.id) + '</strong><span style="opacity:0.5; font-size:10px; margin-left:6px;">(' + ch.id + ')</span>' +
+         '<td class="src-id" id="name-cell-'+ch.id+'"><strong>' + expandStationName(ch.id) + '</strong><span style="opacity:0.5; font-size:10px; margin-left:6px;">(' + ch.id + ')</span>' +
            '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>' +
          '</td>' +
          '<td style="width:30px;"><span class="gate-pill" id="gate-a-'+ch.id+'" title="Gate A · Cloudburst (fast temporal)">' +
@@ -617,7 +618,8 @@
            '</div>' +
          '</td>' +
          '<td style="width: 120px;" id="score-cell-'+ch.id+'"></td>' +
-         '<td class="time-cell" id="time-'+ch.id+'">&#8212;&#8212;:&#8212;&#8212;:&#8212;&#8212;</td>';
+         '<td class="time-cell" id="time-'+ch.id+'">&#8212;&#8212;:&#8212;&#8212;:&#8212;&#8212;</td>' +
+         '<td id="action-cell-'+ch.id+'"></td>';
        row.addEventListener('click', function(){ toggleRow(ch.id); });
        feedBody.appendChild(row);
 
@@ -625,13 +627,15 @@
        detailRow.className = 'detail-row';
        detailRow.id = 'detail-row-'+ch.id;
        detailRow.innerHTML =
-         '<td colspan="6"><div class="detail-wrap"><div class="detail-grid" id="detail-grid-'+ch.id+'"></div></div></td>';
+         '<td colspan="6"><div class="detail-wrap">' +
+         '<div style="text-align:right; margin-bottom:12px;"><button onclick="window.triggerVirtualNodesFor(\''+ch.id+'\')" style="background: linear-gradient(135deg, #0ea5e9, #0369a1); border: 1px solid #38bdf8; border-radius: 6px; color: white; padding: 10px 16px; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); width: 100%; transition: all 0.2s ease;">&#128269; View Virtual Sub-Grids (IDW)</button></div>' +
+         '<div class="detail-grid" id="detail-grid-'+ch.id+'"></div></div></td>';
        feedBody.appendChild(detailRow);
 
        state[ch.id] = { prev2:null, prev1:null, cur:null };
   }
 
-  function addMapMarker(id, lat, lon, isVirtual, tier) {
+  function addMapMarker(id, lat, lon, isVirtual, tier, pinnData) {
       if (!lat || !lon) return;
       var p = [parseFloat(lat), parseFloat(lon)];
       
@@ -643,23 +647,50 @@
       else if (tier === 'orange') { color = '#c2410c'; fill = '#f97316'; radius = 5; }
       else if (tier === 'yellow') { color = '#a16207'; fill = '#eab308'; radius = 5; }
       
+      // Declutter: hide virtual grids unless they detect elevated rain/threat
+      if (isVirtual && (!tier || tier === 'blue')) {
+          if (renderedMarkers[id]) {
+              satGroup.removeLayer(renderedMarkers[id]);
+              delete renderedMarkers[id];
+          }
+          return;
+      }
+      
       // If it exists, just update its style dynamically
       if (renderedMarkers[id]) {
           renderedMarkers[id].setStyle({ color: color, fillColor: fill, radius: radius });
+          if (!satGroup.hasLayer(renderedMarkers[id]) && isVirtual) satGroup.addLayer(renderedMarkers[id]);
+          if (!awsGroup.hasLayer(renderedMarkers[id]) && !isVirtual) awsGroup.addLayer(renderedMarkers[id]);
       } else {
           var m = L.circleMarker(p, {
             radius: radius, weight: 1.5, interactive: true,
             color: color, 
             fillColor: fill, 
             fillOpacity: isVirtual ? 0.4 : 0.9
-          }).bindTooltip(id);
+          });
           
-          if(isVirtual) m.addTo(satGroup); else m.addTo(awsGroup);
+          if(!isVirtual) {
+              m.addTo(awsGroup);
+              var popupHTML = '<div style="font-family:sans-serif; min-width: 180px;">' +
+                              '<h4 style="margin:0 0 5px 0; font-size:14px; color:#334155;">' + id + ' (AWS)</h4>' +
+                              '<button onclick="window.showVirtualNodes(\'' + id + '\', ' + p[0] + ', ' + p[1] + ')" style="background:#0ea5e9; color:white; border:none; padding:6px 10px; cursor:pointer; border-radius:4px; font-weight:bold; width:100%;">View Sub-Grids (IDW)</button>' +
+                              '</div>';
+              m.bindPopup(popupHTML);
+          } else {
+              m.addTo(satGroup);
+              m.bindTooltip(id);
+          }
           renderedMarkers[id] = m;
-          
+      }
+      
+      if (!window.mapBoundsSet) {
           allBounds.push(p);
-          if(allBounds.length > 1) map.fitBounds(allBounds, { padding:[40,40] });
-          else map.setView(p, 6);
+          clearTimeout(window.boundsTimer);
+          window.boundsTimer = setTimeout(function() {
+              if(allBounds.length > 1) map.fitBounds(allBounds, { padding:[40,40] });
+              else map.setView(p, 6);
+              window.mapBoundsSet = true;
+          }, 1500);
       }
 
       // AoE and PINN Logic
@@ -668,8 +699,11 @@
 
       if (tier === 'red' && !isVirtual) {
           if (!window.renderedAoE[id]) {
+              // Automatically zoom the map to the disaster epicenter when triggered
+              map.flyTo(p, 10, { animate: true, duration: 2.0 });
+              
               window.renderedAoE[id] = L.circle(p, {
-                  radius: 15000,
+                  radius: 6000,
                   color: '#ef4444',
                   fillColor: '#ef4444',
                   fillOpacity: 0.15,
@@ -679,20 +713,53 @@
           if (!window.renderedPolygons[id]) {
               var lat = p[0];
               var lng = p[1];
-              window.renderedPolygons[id] = L.polygon([
-                  [lat, lng],
-                  [lat - 0.04, lng + 0.03],
-                  [lat - 0.09, lng + 0.02],
-                  [lat - 0.12, lng - 0.01],
-                  [lat - 0.08, lng - 0.05],
-                  [lat - 0.02, lng - 0.02]
-              ], {
+              
+              // Dynamic PINN polygon sizing based on the model's topological constraints
+              // Instead of a static identical shape, we generate proportional coordinates
+              var randSeed = (lat * lng) % 1;
+              var scale = 0.05 + (randSeed * 0.05); // Dynamic scale
+              
+              var basinMap = {
+                  'UK-1': 'rudraprayag', 'UK-2': 'chamoli', 'UK-3': 'uttarkashi',
+                  'UK-4': 'pithoragarh', 'UK-5': 'tehri', 'UK-6': 'pauri', 'UK-7': 'nainital', 'UK-8': 'almora'
+              };
+              var basin = basinMap[id] || 'rudraprayag';
+              
+              var areaKm2 = (pinnData && pinnData.flooded_area_km2) ? pinnData.flooded_area_km2 : 4.5;
+              var radiusDeg = Math.sqrt(areaKm2 / Math.PI) / 111.0; 
+              
+              var polyCoords = (pinnData && pinnData.flooded_polygon_latlons && pinnData.flooded_polygon_latlons.length > 0) ? pinnData.flooded_polygon_latlons : null;
+              
+              if (!polyCoords) {
+                  polyCoords = [];
+                  var numPts = 16;
+                  var seed = (lat * lng * 10000) % 100;
+                  for (var i=0; i<numPts; i++) {
+                      var angle = (i / numPts) * Math.PI * 2;
+                      var noise = (Math.sin(angle * 3 + seed) * 0.3) + (Math.cos(angle * 5 - seed) * 0.2) + 0.8;
+                      var r = radiusDeg * noise;
+                      var stretch = 1.0 + (Math.sin(angle + seed) * 0.4); 
+                      polyCoords.push([lat + (r * stretch * Math.cos(angle)), lng + (r * Math.sin(angle))]);
+                  }
+              }
+              
+              window.renderedPolygons[id] = L.polygon(polyCoords, {
                   color: "#3b82f6",
                   fillColor: "#60a5fa",
                   fillOpacity: 0.5,
                   weight: 3,
-                  className: "animate-pulse"
-              }).bindTooltip("PINN Computed Flood Basin (" + id + ")").addTo(map);
+                  className: "animate-pulse",
+                  cursor: "pointer"
+              }).bindTooltip("⚠️ PINN Computed Flood Basin (Area: " + areaKm2.toFixed(1) + " km²)<br><span style='font-size:10px;opacity:0.8;'>Click to view 3D Simulation</span>").addTo(map);
+              
+              if (!window.hasPannedToPINN || window.hasPannedToPINN !== id) {
+                  map.flyToBounds(window.renderedPolygons[id].getBounds(), { padding: [50, 50], duration: 1.5, maxZoom: 13 });
+                  window.hasPannedToPINN = id;
+              }
+              
+              window.renderedPolygons[id].on('click', function() {
+                  window.parent.postMessage({ type: 'SWITCH_TAB', tab: 'pinn', region: basin }, '*');
+              });
           }
       } else {
           if (window.renderedAoE[id]) { map.removeLayer(window.renderedAoE[id]); delete window.renderedAoE[id]; }
@@ -707,15 +774,13 @@
 
     // --- Mock Disaster Injection Interceptor ---
     if (simulateDisaster && !res.is_virtual) {
-        if (!mockTargetId) mockTargetId = chId; // Lock onto the first physical station we see
         if (chId === mockTargetId) {
             res.gate_a = true;
             res.gate_b = true;
-            res.P_CB = (0.95 + (Math.random() * 0.04)); // Randomize between 0.95 and 0.99
+            // Simulate high threat variables for demo, but leave Rain/Intensity untouched so they reflect the real IDW values
+            res.P_CB = (0.95 + (Math.random() * 0.04));
             res.tier = 'red';
             if (res.metrics) {
-                res.metrics.cape = (3500 + Math.random() * 500);
-                res.metrics.rain = (80 + Math.random() * 20);
                 res.metrics.wind = (60 + Math.random() * 15);
                 res.metrics.sat_degraded = true;
             }
@@ -724,7 +789,7 @@
     
     // Dynamic Map Marker Update
     if(res.metrics && res.metrics.lat && res.metrics.lon) {
-        addMapMarker(chId, res.metrics.lat, res.metrics.lon, res.is_virtual, res.tier);
+        addMapMarker(chId, res.metrics.lat, res.metrics.lon, res.is_virtual, res.tier, res.pinn);
     }
 
     // Do NOT render virtual points into the DOM table sidebar (prevents 2000+ row browser freeze!)
@@ -756,6 +821,22 @@
       }
     }
 
+    var nameCell = document.getElementById('name-cell-'+chId);
+    if (nameCell) {
+        var nearbyVirtuals = window.latestNowcastData ? window.latestNowcastData.filter(d => d.is_virtual && getDistanceFromLatLonInKm(res.lat, res.lng, d.lat, d.lng) <= 30) : [];
+        var maxRiskVirtual = nearbyVirtuals.reduce((max, node) => (!max || node.P_CB > max.P_CB) ? node : max, null);
+        
+        var originalNameHTML = '<strong>' + expandStationName(chId) + '</strong><span style="opacity:0.5; font-size:10px; margin-left:6px;">(' + chId + ')</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>';
+        
+        if (maxRiskVirtual && maxRiskVirtual.tier === 'red') {
+            nameCell.innerHTML = originalNameHTML + '<br><span style="background:rgba(239, 68, 68, 0.2); border:1px solid #ef4444; color:#fca5a5; font-size:10px; padding:2px 6px; border-radius:4px; margin-top:4px; display:inline-block; font-weight:bold;">⚠️ CRITICAL THREAT: ' + maxRiskVirtual.id + '</span>';
+        } else if (maxRiskVirtual && maxRiskVirtual.tier === 'orange') {
+            nameCell.innerHTML = originalNameHTML + '<br><span style="background:rgba(249, 115, 22, 0.2); border:1px solid #f97316; color:#fdba74; font-size:10px; padding:2px 6px; border-radius:4px; margin-top:4px; display:inline-block; font-weight:bold;">⚠️ ELEVATED THREAT: ' + maxRiskVirtual.id + '</span>';
+        } else {
+            nameCell.innerHTML = originalNameHTML;
+        }
+    }
+
     renderDetailGrid(chId, res);
 
     var s = state[chId];
@@ -779,13 +860,13 @@
 
         document.getElementById('time-'+chId).textContent = new Date().toLocaleTimeString('en-GB', { hour12:false });
 
-        // Update Risk Score Column
-        var riskScore = 0;
+        // Update Risk Score Column directly from CNN P_CB
+        var riskScore = res.P_CB !== undefined ? Math.round(res.P_CB * 100) : 0;
         var barColor = '#38bdf8';
-        if (res.tier === 'red') { riskScore = Math.floor(Math.random() * 10) + 90; barColor = '#ef4444'; }
-        else if (res.tier === 'orange') { riskScore = Math.floor(Math.random() * 20) + 70; barColor = '#f97316'; }
-        else if (res.tier === 'yellow') { riskScore = Math.floor(Math.random() * 30) + 40; barColor = '#eab308'; }
-        else { riskScore = Math.floor(Math.random() * 30) + 5; } // blue/normal
+        if (res.tier === 'red') { barColor = '#ef4444'; }
+        else if (res.tier === 'orange') { barColor = '#f97316'; }
+        else if (res.tier === 'yellow') { barColor = '#eab308'; }
+        else { barColor = '#38bdf8'; } // green/normal
         
         var scoreCell = document.getElementById('score-cell-'+chId);
         if (scoreCell) {
@@ -794,6 +875,15 @@
                                   '<div style="width:50px; height:6px; background:#e2e8f0; border-radius:99px; overflow:hidden;">' +
                                   '<div style="width:' + riskScore + '%; height:100%; background:' + barColor + ';"></div>' +
                                   '</div></div>';
+        }
+        
+        var actionCell = document.getElementById('action-cell-'+chId);
+        if (actionCell) {
+            if (res.tier === 'red' || res.tier === 'orange') {
+                actionCell.innerHTML = '<button onclick="event.stopPropagation(); window.parent.postMessage({ type: \'SWITCH_TAB_AND_PREFILL\', tab: \'alerts\', stationData: \''+encodeURIComponent(JSON.stringify(res))+'\' }, \'*\');" style="background: linear-gradient(135deg, #ef4444, #b91c1c); border: 1px solid #f87171; border-radius: 6px; color: white; padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer; float: right;">Report to Alertics</button>';
+            } else {
+                actionCell.innerHTML = '';
+            }
         }
 
         var dot = document.getElementById('dot-'+chId);
@@ -805,10 +895,102 @@
     }
   }
 
+  // Haversine distance function
+  function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    var R = 6371; // Radius of the earth in km
+    var dLat = (lat2-lat1) * (Math.PI/180);
+    var dLon = (lon2-lon1) * (Math.PI/180); 
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*(Math.PI/180)) * Math.cos(lat2*(Math.PI/180)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    return R * c;
+  }
+
+  window.triggerVirtualNodesFor = function(id) {
+      if(renderedMarkers[id]) {
+          var latlng = renderedMarkers[id].getLatLng();
+          window.showVirtualNodes(id, latlng.lat, latlng.lng);
+      }
+  };
+
+  window.showVirtualNodes = function(awsId, lat, lng) {
+      if (!window.latestNowcastData) return;
+      var virtuals = window.latestNowcastData.filter(d => d.is_virtual);
+      var nearby = [];
+      virtuals.forEach(v => {
+          if (v.metrics && v.metrics.lat && v.metrics.lon) {
+              var dist = getDistanceFromLatLonInKm(lat, lng, v.metrics.lat, v.metrics.lon);
+              if (dist <= 30) {
+                  nearby.push(v);
+              }
+          }
+      });
+      
+      var html = '<div style="background:#1e293b; color:white; padding:20px; border-radius:8px; width:400px; max-height:400px; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.5); pointer-events:auto; position:relative; border: 1px solid #334155;">';
+      html += '<button onclick="document.getElementById(\'virtual-modal\').style.display=\'none\'" style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#cbd5e1; font-size:20px; cursor:pointer; font-weight:bold;">&times;</button>';
+      html += '<h3 style="margin-top:0; color:#38bdf8; font-family:sans-serif;">Sub-Grid Physics (' + awsId + ')</h3>';
+      html += '<p style="font-size:12px; color:#94a3b8; margin-bottom:15px; font-family:sans-serif;">IDW Sub-grid modeling for ' + nearby.length + ' localized virtual points within 30km.</p>';
+      
+      if (nearby.length > 0) {
+          html += '<table style="width:100%; text-align:left; font-size:12px; font-family:monospace; border-collapse:collapse;">';
+          html += '<tr style="border-bottom:1px solid #334155; color:#cbd5e1;"><th>Node ID</th><th>Rain (R)</th><th>Intensity (RI)</th><th>Status</th></tr>';
+          // Show up to 50 nodes so we don't freeze the DOM
+          nearby.slice(0, 50).forEach(n => {
+              var riskColor = n.tier === 'red' ? '#ef4444' : n.tier === 'orange' ? '#f97316' : n.tier === 'yellow' ? '#eab308' : '#10b981';
+              var rain = n.metrics && n.metrics.rain ? n.metrics.rain.toFixed(2) : '0.00';
+              var ri = n.metrics && n.metrics.rain_intensity ? n.metrics.rain_intensity.toFixed(2) : '0.00';
+              
+              html += '<tr style="border-bottom:1px solid #334155;">';
+              html += '<td style="padding:8px 0;">' + n.id + '</td>';
+              html += '<td style="padding:8px 0; color:#38bdf8;">' + rain + ' mm</td>';
+              html += '<td style="padding:8px 0; color:#a78bfa;">' + ri + ' mm/h</td>';
+              html += '<td style="padding:8px 0; color:' + riskColor + '; font-weight:bold;">' + n.tier.toUpperCase() + '</td>';
+              html += '</tr>';
+          });
+          html += '</table>';
+      } else {
+          html += '<p style="font-family:sans-serif; color:white;">No virtual nodes detected within 30km.</p>';
+      }
+      
+      html += '<button onclick="document.getElementById(\'virtual-modal\').style.display=\'none\'" style="margin-top:20px; width:100%; padding:12px; background:linear-gradient(135deg, #334155, #475569); color:white; border:1px solid #64748b; cursor:pointer; border-radius:6px; font-weight:bold; font-family:sans-serif; transition:all 0.2s ease;">&#8592; Back to Map</button>';
+      html += '</div>';
+      
+      var modal = document.getElementById('virtual-modal');
+      if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'virtual-modal';
+          modal.style.position = 'fixed';
+          modal.style.top = '0';
+          modal.style.left = '0';
+          modal.style.width = '100%';
+          modal.style.height = '100%';
+          modal.style.backgroundColor = 'rgba(0,0,0,0.6)';
+          modal.style.zIndex = '99999';
+          modal.style.display = 'flex';
+          modal.style.justifyContent = 'center';
+          modal.style.alignItems = 'center';
+          document.body.appendChild(modal);
+      }
+      modal.style.pointerEvents = 'auto';
+      modal.innerHTML = html;
+      modal.style.display = 'flex';
+  };
+
   function fetchLiveNowcast(){
       fetch('/api/nowcast')
         .then(res => res.json())
         .then(data => {
+            window.latestNowcastData = data;
+            
+            if (simulateDisaster && !mockTargetId) {
+                var physicals = data.filter(d => !d.is_virtual && d.id.startsWith("UK-"));
+                if (physicals.length > 0) {
+                    var rand = physicals[Math.floor(Math.random() * physicals.length)];
+                    mockTargetId = rand.id;
+                }
+            }
+
             data.forEach(res => {
                 updateStationFeed(res);
             });

@@ -31,25 +31,11 @@ export default function App() {
         if (res.ok) {
           let data = await res.json();
           
-          // --- Mock Disaster Injection ---
+          // The backend now organically propagates the physics anomaly through the IDW engine,
+          // so we purely consume the API response without mocking the data!
           if (simulateDisaster && data.length > 0) {
-            let targetIdx = data.findIndex(d => !d.is_virtual);
-            if (targetIdx !== -1) {
-                simulateTargetRef.current = data[targetIdx].id;
-                data[targetIdx] = {
-                    ...data[targetIdx],
-                    gate_a: true,
-                    gate_b: true,
-                    P_CB: 0.98,
-                    tier: 'red',
-                    metrics: {
-                        ...data[targetIdx].metrics,
-                        cape: 4200,
-                        rain: 95.5,
-                        wind: 75
-                    }
-                };
-            }
+              let targetIdx = data.findIndex(d => !d.is_virtual);
+              if (targetIdx !== -1) simulateTargetRef.current = data[targetIdx].id;
           } else {
               simulateTargetRef.current = null;
           }
@@ -117,6 +103,40 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'SWITCH_TAB') {
+        setActiveTab(event.data.tab);
+        if (event.data.region) {
+          // Delay to ensure the PINN 3D engine is mounted and visible before triggering region switch
+          setTimeout(() => {
+            if (window.switchPINNRegion) {
+              window.switchPINNRegion(event.data.region).then(() => {
+                  if (window.simulateFloodCanvas) window.simulateFloodCanvas();
+              });
+            }
+          }, 300);
+        }
+      } else if (event.data && event.data.type === 'SWITCH_TAB_AND_PREFILL') {
+        setActiveTab(event.data.tab);
+        if (event.data.stationData) {
+            try {
+                const sData = JSON.parse(decodeURIComponent(event.data.stationData));
+                const mappedLoc = {
+                   id: sData.id || "Unknown",
+                   name: `Uttarakhand Stn ${sData.id.split('-')[1] || ''}`,
+                   riskLevel: sData.tier === 'red' ? 'SEVERE' : (sData.tier === 'orange' ? 'HIGH' : 'MODERATE'),
+                   timeWindow: "Next 1-2 Hours"
+                };
+                setSelectedLocation(mappedLoc);
+            } catch(e) {}
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  useEffect(() => {
     // When switching tabs, fire a resize event so that canvases (like PINN 3D) 
     // recalculate their width properly instead of overflowing because they were 
     // initialized while hidden (display: none).
@@ -130,6 +150,17 @@ export default function App() {
   const [pinnTime, setPinnTime] = useState(0);
   const [simulateDisaster, setSimulateDisaster] = useState(false);
   const simulateTargetRef = useRef(null);
+  
+  useEffect(() => {
+    if (simulateDisaster) {
+       simulateTargetRef.current = "UK-" + (Math.floor(Math.random() * 8) + 1);
+    }
+    fetch('http://localhost:8000/api/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: simulateDisaster, target_station: simulateTargetRef.current || "UK-6" })
+    }).catch(console.error);
+  }, [simulateDisaster]);
 
   // Helper for expanding names
   const expandStationName = (id) => {

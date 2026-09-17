@@ -2,6 +2,7 @@ import time
 import threading
 import logging
 import requests
+import random
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,7 +12,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import numpy as np
+import threading
 from src.mosdac_live_daemon import PHYSICAL_STATIONS, VIRTUAL_GRID
+
+GLOBAL_SIMULATION_ACTIVE = False
+GLOBAL_SIMULATION_TARGET = "UK-6"
+WAKE_EVENT = threading.Event()
 
 class AwsLiveDaemon:
     def __init__(self, buffer, interval_seconds=900):
@@ -90,6 +96,14 @@ class AwsLiveDaemon:
                 physical_data = self.fetch_realtime_imd_aws()
                 now_epoch = datetime.now(timezone.utc).timestamp()
                 
+                if getattr(sys.modules[__name__], 'GLOBAL_SIMULATION_ACTIVE', False):
+                    target = getattr(sys.modules[__name__], 'GLOBAL_SIMULATION_TARGET', "UK-6")
+                    if target in physical_data:
+                        physical_data[target]['R'] = random.uniform(100.0, 150.0)
+                        physical_data[target]['RI'] = random.uniform(80.0, 120.0)
+                        physical_data[target]['R_30'] = physical_data[target]['R'] / 2.0
+                        physical_data[target]['R_60'] = physical_data[target]['R']
+                        
                 virtual_data = self._compute_virtual_grid(physical_data)
                 
                 # Ingest Physical
@@ -115,11 +129,11 @@ class AwsLiveDaemon:
             except Exception as e:
                 logging.getLogger("daemons").error(f"[AWS Daemon] Unhandled error in cycle: {e}")
             
-            # Sleep in small increments to allow clean shutdown
-            for _ in range(self.interval_seconds):
-                if not self.running:
-                    break
-                time.sleep(1)
+            # Sleep until interval or woken up by WAKE_EVENT
+            getattr(sys.modules[__name__], 'WAKE_EVENT').wait(self.interval_seconds)
+            getattr(sys.modules[__name__], 'WAKE_EVENT').clear()
+            if not self.running:
+                break
 
     def fetch_open_meteo_aws(self):
         try:

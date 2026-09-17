@@ -130,8 +130,12 @@ var BASIN_BOUNDS = {
 };
 
 // ── ENGINE STATE ──────────────────────────────────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const initRegionRaw = urlParams.get('region') || "rudraprayag";
+const initRegion = initRegionRaw.toLowerCase();
+
 var PINN_SIM = {
-  activeRegion: "rudraprayag",
+  activeRegion: initRegion,
   currentRegionData: null,
   scene: null, camera: null, renderer: null, controls: null, terrainMesh: null, waterMesh: null, townMarkers: [], waterTargetY: -200, waterCurrentY: -200,
   satLayer: null,

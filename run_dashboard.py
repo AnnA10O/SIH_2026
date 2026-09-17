@@ -57,6 +57,31 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                     pass
             return
 
+        if self.path == "/api/simulate":
+            import json
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length else "{}"
+            try:
+                data = json.loads(body)
+                active = data.get("active", False)
+                target_station = data.get("target_station", "UK-6")
+                import src.aws_live_daemon as aws_daemon
+                aws_daemon.GLOBAL_SIMULATION_ACTIVE = active
+                aws_daemon.GLOBAL_SIMULATION_TARGET = target_station
+                if hasattr(aws_daemon, 'WAKE_EVENT'):
+                    aws_daemon.WAKE_EVENT.set()
+                
+                self.send_response(200)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "simulation_active": active, "target": target_station}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(str(e).encode("utf-8"))
+            return
+
         if hasattr(super(), 'do_POST'):
             return super().do_POST()
         else:
@@ -119,11 +144,12 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
             from src.inference_server import handle_api_request
             try:
                 data = handle_api_request()
+                json_body = json.dumps(data).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps(data).encode("utf-8"))
+                self.wfile.write(json_body)
             except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
                 pass
             except Exception as e:
