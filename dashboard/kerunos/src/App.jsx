@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
-import RiskMap from "./components/RiskMap";
 import RiskPeakGraph from "./components/RiskPeakGraph";
 import WeatherDetailsCards from "./components/WeatherDetailsCards";
 import AlertManager from "./components/AlertManager";
@@ -268,11 +267,10 @@ export default function App() {
         {/* TAB 2: FULL-SCREEN RISK MAP VIEW */}
         {activeTab === "map" && (
           <div className="h-full w-full animate-in fade-in duration-300">
-            <RiskMap
-              selectedLocation={selectedLocation}
-              stations={liveStations}
-              communityReports={reports}
-              onSelectStation={(stn) => setSelectedLocation(stn)}
+            <iframe 
+              src="/UI/realtime/index.html" 
+              className="w-full h-full border-none" 
+              title="Realtime Simulation UI (Map)"
             />
           </div>
         )}
