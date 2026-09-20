@@ -13,3 +13,6 @@ xarray
 joblib
 snntorch
 openpyxl
+geopandas
+shapely
+flask
