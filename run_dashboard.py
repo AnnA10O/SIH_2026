@@ -361,54 +361,36 @@ def main():
             sys.exit(0)
 
     print(" Select which UI you would like to run:")
-    print("  [1] Older UI (Mission Control & PINN Handoff)  -> dashboard/older_ui.html")
-    print("  [2] Newer UI (Kerunos AI NOWCAST Dashboard)    -> dashboard/newer_ui.html")
-    print("  [3] Realtime Simulation UI                     -> UI/realtime/index.html")
-    print("  [4] Unified Tabbed Dashboard UI                -> dashboard/tabbed_dashboard.html")
-    print("  [5] Launch All UIs (in separate browser tabs)")
-    print("  [6] Exit")
+    print("  [1] Correct UI (React KERAUNOS Dashboard)     -> dashboard/newer_ui.html")
+    print("  [2] DEPRECATED (Mission Control)              -> dashboard/older_ui_DEPRECATED.html")
+    print("  [3] DEPRECATED (Unified Tabbed Dashboard)     -> dashboard/tabbed_dashboard_DEPRECATED.html")
+    print("  [4] Exit")
     print("-" * 66)
 
     try:
-        choice = input(" Enter choice [1-6] (default: 1): ").strip()
+        choice = input(" Enter choice [1-4] (default: 1): ").strip()
     except (KeyboardInterrupt, EOFError):
-        choice = "6"
+        choice = "4"
 
-    url_older = f"http://localhost:{PORT}/dashboard/older_ui.html"
     url_newer = f"http://localhost:{PORT}/dashboard/newer_ui.html"
-    url_realtime = f"http://localhost:{PORT}/UI/realtime/index.html"
-    url_tabbed = f"http://localhost:{PORT}/dashboard/tabbed_dashboard.html"
+    url_older = f"http://localhost:{PORT}/dashboard/older_ui_DEPRECATED.html"
+    url_tabbed = f"http://localhost:{PORT}/dashboard/tabbed_dashboard_DEPRECATED.html"
 
     if choice in ("", "1"):
-        print(f"\n>> Opening Option 1 [Older UI]: {url_older}")
-        webbrowser.open(url_older)
+        print(f"\n>> Opening Option 1 [Correct UI (React)]: {url_newer}")
+        webbrowser.open(url_newer)
     elif choice == "2":
-        print(f"\n>> Opening Option 2 [Newer UI (Kerunos)]: {url_newer}")
-        webbrowser.open(url_newer)
-    elif choice == "3":
-        print(f"\n>> Opening Option 3 [Realtime Simulation UI]: {url_realtime}")
-        webbrowser.open(url_realtime)
-    elif choice == "4":
-        print(f"\n>> Opening Option 4 [Unified Tabbed Dashboard UI]: {url_tabbed}")
-        webbrowser.open(url_tabbed)
-    elif choice == "5":
-        print(f"\n>> Opening Older UI: {url_older}")
+        print(f"\n>> Opening Option 2 [DEPRECATED]: {url_older}")
         webbrowser.open(url_older)
-        time.sleep(0.4)
-        print(f">> Opening Newer UI (Kerunos): {url_newer}")
-        webbrowser.open(url_newer)
-        time.sleep(0.4)
-        print(f">> Opening Realtime Simulation UI: {url_realtime}")
-        webbrowser.open(url_realtime)
-        time.sleep(0.4)
-        print(f">> Opening Unified Tabbed Dashboard UI: {url_tabbed}")
+    elif choice == "3":
+        print(f"\n>> Opening Option 3 [DEPRECATED]: {url_tabbed}")
         webbrowser.open(url_tabbed)
-    elif choice == "6":
+    elif choice == "4":
         print("\nExiting launcher.")
         sys.exit(0)
     else:
-        print(f"\n>> Unknown option '{choice}', opening Older UI by default.")
-        webbrowser.open(url_older)
+        print(f"\n>> Unknown option '{choice}', opening Correct UI by default.")
+        webbrowser.open(url_newer)
 
     print("\n[INFO] Server is running in the background. Press Ctrl+C to stop.")
     try:

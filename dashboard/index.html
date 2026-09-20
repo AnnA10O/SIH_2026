@@ -183,8 +183,8 @@
 
   <div class="card-container">
     <!-- Option 1: Older UI -->
-    <a href="./older_ui.html" class="card" id="option1">
-      <div class="card-tag">OPTION 1</div>
+    <a href="./older_ui_DEPRECATED.html" class="card" id="option1">
+      <div class="card-tag">DEPRECATED</div>
       <div>
         <div class="option-num">Press [1] or Click</div>
         <div class="card-title">Older UI (Mission Control)</div>
@@ -192,14 +192,14 @@
           Classic Mission Control Interface featuring PINN SWE physics engine visualizations, telemetry graphs, regional station maps, and handoff metrics.
         </div>
       </div>
-      <div class="card-btn btn-older">
+      <div class="card-btn btn-older" style="background: #475569;">
         Launch Older UI &rarr;
       </div>
     </a>
 
     <!-- Option 2: Newer UI -->
-    <a href="./newer_ui.html" class="card" id="option2">
-      <div class="card-tag">OPTION 2</div>
+    <a href="./newer_ui.html" class="card" id="option2" style="border: 2px solid #38bdf8;">
+      <div class="card-tag" style="background: #0ea5e9; color: white;">CORRECT UI</div>
       <div>
         <div class="option-num">Press [2] or Click</div>
         <div class="card-title">Newer UI (Kerunos NOWCAST)</div>
@@ -214,22 +214,22 @@
 
     <!-- Option 3: Realtime Simulation UI -->
     <a href="../UI/realtime/index.html" class="card" id="option3">
-      <div class="card-tag">OPTION 3</div>
+      <div class="card-tag">COMPONENT</div>
       <div>
         <div class="option-num">Press [3] or Click</div>
         <div class="card-title">Realtime Simulation UI</div>
         <div class="card-desc">
-          Live stream simulation view focusing on real-time Doppler radar vectors and satellite Nowcast feeds.
+          Live stream simulation view focusing on real-time Doppler radar vectors and satellite Nowcast feeds. (Used inside Newer UI map tab)
         </div>
       </div>
-      <div class="card-btn btn-older">
+      <div class="card-btn btn-older" style="background: #475569;">
         Launch Realtime UI &rarr;
       </div>
     </a>
 
     <!-- Option 4: Unified Tabbed Dashboard -->
-    <a href="./tabbed_dashboard.html" class="card" id="option4">
-      <div class="card-tag">OPTION 4</div>
+    <a href="./tabbed_dashboard_DEPRECATED.html" class="card" id="option4">
+      <div class="card-tag">DEPRECATED</div>
       <div>
         <div class="option-num">Press [4] or Click</div>
         <div class="card-title">Unified Tabbed Dashboard</div>
@@ -237,7 +237,7 @@
           Comprehensive multi-tabbed interface integrating Module 1 GIS Sensors, Module 2 AI Risk Nowcast, Module 3 PINN 3D Hydrodynamics, and Module 4 Accuracy Proof.
         </div>
       </div>
-      <div class="card-btn btn-tabbed">
+      <div class="card-btn btn-tabbed" style="background: #475569;">
         Launch Tabbed Dashboard &rarr;
       </div>
     </a>
@@ -252,10 +252,10 @@
 
   <script>
     document.addEventListener('keydown', (e) => {
-      if (e.key === '1') window.location.href = './older_ui.html';
+      if (e.key === '1') window.location.href = './older_ui_DEPRECATED.html';
       else if (e.key === '2') window.location.href = './newer_ui.html';
       else if (e.key === '3') window.location.href = '../UI/realtime/index.html';
-      else if (e.key === '4') window.location.href = './tabbed_dashboard.html';
+      else if (e.key === '4') window.location.href = './tabbed_dashboard_DEPRECATED.html';
     });
   </script>
 </body>
