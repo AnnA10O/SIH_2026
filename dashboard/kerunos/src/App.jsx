@@ -22,18 +22,23 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [liveStations, setLiveStations] = useState([]);
   const [aiModelMetrics, setAiModelMetrics] = useState({ f1Score: 0, accuracy: 0, falseAlarmRate: 0 });
+  const [backendOnline, setBackendOnline] = useState(false);
+  const retryDelayRef = useRef(5000); // start at 5s, back off to 30s
+  const retryTimerRef = useRef(null);
 
-  // Fetch live predictions from the inference server
+  // Continuously poll backend — with exponential backoff when offline
   useEffect(() => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    let intervalId = null;
+
     const fetchNowcast = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const res = await fetch(`${baseUrl}/api/nowcast`);
         if (res.ok) {
           let data = await res.json();
-          
-          // The backend now organically propagates the physics anomaly through the IDW engine,
-          // so we purely consume the API response without mocking the data!
+          setBackendOnline(true);
+          retryDelayRef.current = 5000; // reset backoff on success
+
           if (simulateDisaster && data.length > 0) {
               let targetIdx = data.findIndex(d => !d.is_virtual);
               if (targetIdx !== -1) simulateTargetRef.current = data[targetIdx].id;
@@ -43,10 +48,9 @@ export default function App() {
 
           setLiveStations(data);
           
-          // Compute the region's overall risk score and populate dynamic locations
           if (data && data.length > 0) {
             const dynamicLocations = data
-              .filter(d => !d.is_virtual) // Only feature trusted physical towers in the sidebar locations list
+              .filter(d => !d.is_virtual)
               .map(d => ({
                 id: d.id,
                 name: expandStationName(d.id),
@@ -71,7 +75,6 @@ export default function App() {
             else if (maxProb >= 0.35) level = "MODERATE";
             
             setSelectedLocation(prev => {
-              // If it's the first load, grab the most dangerous physical station
               const base = prev || dynamicLocations.sort((a, b) => b.riskScore - a.riskScore)[0] || dynamicLocations[0];
               return {
                 ...base,
@@ -81,18 +84,30 @@ export default function App() {
               };
             });
           }
+
+          // Switch to 15s polling when online
+          if (intervalId) clearInterval(intervalId);
+          intervalId = setInterval(fetchNowcast, 15000);
+        } else {
+          throw new Error(`HTTP ${res.status}`);
         }
       } catch (err) {
-        console.error("Failed to fetch live nowcast data:", err);
+        console.warn(`Backend offline, retrying in ${retryDelayRef.current / 1000}s...`, err.message);
+        setBackendOnline(false);
+        // Exponential backoff: 5s → 10s → 30s max
+        if (intervalId) clearInterval(intervalId);
+        retryTimerRef.current = setTimeout(() => {
+          retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30000);
+          fetchNowcast();
+        }, retryDelayRef.current);
       }
     };
+
     fetchNowcast();
-    const interval = setInterval(fetchNowcast, 15000); // 15 sec polling
 
     // Fetch AI metrics once on mount
     const fetchMetrics = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const res = await fetch(`${baseUrl}/api/metrics`);
         if (res.ok) setAiModelMetrics(await res.json());
       } catch (err) {
@@ -101,7 +116,10 @@ export default function App() {
     };
     fetchMetrics();
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
