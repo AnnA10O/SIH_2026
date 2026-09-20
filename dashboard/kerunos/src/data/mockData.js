@@ -1,0 +1,290 @@
+export const monitoringLocations = [
+  {
+    id: "mandakini",
+    name: "Mandakini Valley, Kedarnath",
+    region: "Rudraprayag District, Uttarakhand",
+    lat: 30.7346,
+    lng: 79.0669,
+    zoom: 12,
+    riskLevel: "SEVERE",
+    riskColor: "#ef4444",
+    riskPercent: 87,
+    expectedPeak: "16:00 IST",
+    leadTime: "~2 Hours",
+    rainfallRate: "60–70 mm/hr",
+    timeWindow: "15:30 – 17:00 IST",
+    hazard: "Flash Flood / Cloudburst",
+    description: "Convective microburst cloud formation detected over Kedarnath peak ridge. High flash flood risk along Mandakini riverbed."
+  },
+  {
+    id: "alaknanda",
+    name: "Alaknanda Valley, Badrinath",
+    region: "Chamoli District, Uttarakhand",
+    lat: 30.7433,
+    lng: 79.4938,
+    zoom: 12,
+    riskLevel: "HIGH",
+    riskColor: "#f97316",
+    riskPercent: 68,
+    expectedPeak: "17:15 IST",
+    leadTime: "~3.5 Hours",
+    rainfallRate: "40–50 mm/hr",
+    timeWindow: "16:45 – 18:30 IST",
+    hazard: "Heavy Rainfall & Landslide Warning",
+    description: "Rapid moist air convergence observed near Mana pass. Landslide risk high near Joshimath-Badrinath highway."
+  },
+  {
+    id: "bhagirathi",
+    name: "Bhagirathi Valley, Uttarkashi",
+    region: "Uttarkashi District, Uttarakhand",
+    lat: 30.7268,
+    lng: 78.4354,
+    zoom: 12,
+    riskLevel: "MODERATE",
+    riskColor: "#eab308",
+    riskPercent: 42,
+    expectedPeak: "18:00 IST",
+    leadTime: "~4 Hours",
+    rainfallRate: "20–35 mm/hr",
+    timeWindow: "17:30 – 19:00 IST",
+    hazard: "Moderate Thunderstorm",
+    description: "Scattered cloud cells building up near Gangotri glacier outlet. Thunderstorms expected."
+  },
+  {
+    id: "pindar",
+    name: "Pindar Valley, Tharali",
+    region: "Chamoli District, Uttarakhand",
+    lat: 30.0617,
+    lng: 79.5083,
+    zoom: 12,
+    riskLevel: "LOW",
+    riskColor: "#22c55e",
+    riskPercent: 18,
+    expectedPeak: "19:30 IST",
+    leadTime: "~5.5 Hours",
+    rainfallRate: "5–12 mm/hr",
+    timeWindow: "19:00 – 20:30 IST",
+    hazard: "Light Rain",
+    description: "Normal meteorological conditions. Standard routine AI nowcast monitoring active."
+  }
+];
+
+export const riskTimelineData = [
+  { time: "13:00", risk: 22, level: "Low", status: "Normal" },
+  { time: "14:00", risk: 38, level: "Moderate", status: "Cell Building" },
+  { time: "15:00", risk: 65, level: "High", status: "Rapid Rainfall Increase" },
+  { time: "16:00", risk: 87, level: "Severe", status: "🔴 PEAK RISK (Cloudburst Expected)" },
+  { time: "17:00", risk: 54, level: "High", status: "Dissipating" },
+  { time: "18:00", risk: 28, level: "Moderate", status: "Subsiding" },
+  { time: "19:00", risk: 14, level: "Low", status: "Normal" }
+];
+
+export const weatherStations = [
+  {
+    id: "st-kedarnath",
+    name: "Kedarnath Weather Station",
+    code: "KED-01",
+    lat: 30.7346,
+    lng: 79.0669,
+    elevation: "3,583 m",
+    status: "online",
+    temp: "11.4 °C",
+    humidity: "94%",
+    pressure: "678 hPa",
+    windSpeed: "42 km/h",
+    radarStatus: "ACTIVE (Doppler X-Band)"
+  },
+  {
+    id: "st-joshimath",
+    name: "Joshimath Emergency Station",
+    code: "JSH-04",
+    lat: 30.5562,
+    lng: 79.5637,
+    elevation: "1,890 m",
+    status: "online",
+    temp: "17.2 °C",
+    humidity: "86%",
+    pressure: "812 hPa",
+    windSpeed: "28 km/h",
+    radarStatus: "ACTIVE"
+  },
+  {
+    id: "st-guptkashi",
+    name: "Guptkashi Telemetry Post",
+    code: "GPT-02",
+    lat: 30.5228,
+    lng: 79.0768,
+    elevation: "1,319 m",
+    status: "online",
+    temp: "19.8 °C",
+    humidity: "82%",
+    pressure: "865 hPa",
+    windSpeed: "19 km/h",
+    radarStatus: "SYNCED"
+  },
+  {
+    id: "st-sonprayag",
+    name: "Sonprayag Hydrological Base",
+    code: "SON-03",
+    lat: 30.6300,
+    lng: 79.0200,
+    elevation: "1,820 m",
+    status: "online",
+    temp: "16.1 °C",
+    humidity: "89%",
+    pressure: "820 hPa",
+    windSpeed: "24 km/h",
+    radarStatus: "ACTIVE"
+  }
+];
+
+export const initialCommunityReports = [
+  {
+    id: "rep-1",
+    eventDate: "2026-09-15",
+    submissionDate: "2026-09-16",
+    location: "Kedarnath",
+    eventType: "Flash Flood",
+    type: "Flash Flood",
+    icon: "🌊",
+    severity: "Severe",
+    lat: 30.6820,
+    lng: 79.0550,
+    time: "14:20 IST",
+    count: 3,
+    description: "Stream water level rose suddenly by 1.5 meters. Debris carrying over track.",
+    missingElements: ["Early Warning", "Safe evacuation route information"],
+    problemsFaced: "The water level rose extremely fast and we had nowhere to go.",
+    missingInfo: "Information on safe higher ground.",
+    warningTime: "Less than 15 minutes",
+    helpfulAdditions: "A loud siren and clear marked paths to safety."
+  },
+  {
+    id: "rep-2",
+    eventDate: "2026-09-13",
+    submissionDate: "2026-09-14",
+    location: "Gaurikund",
+    eventType: "Heavy Rainfall",
+    type: "Heavy Rain",
+    icon: "🌧️",
+    severity: "High",
+    lat: 30.6515,
+    lng: 79.0252,
+    time: "14:18 IST",
+    count: 12,
+    description: "Torrential downpour started 15 mins ago. Visibility reduced to under 50m.",
+    missingElements: ["Communication / Network", "Transportation"],
+    problemsFaced: "All mobile networks went down and roads were blocked by debris.",
+    missingInfo: "When the roads would be cleared.",
+    warningTime: "15–30 minutes",
+    helpfulAdditions: "Emergency satellite phones or radio communication points."
+  },
+  {
+    id: "rep-3",
+    eventDate: "2026-09-12",
+    submissionDate: "2026-09-12",
+    location: "Sonprayag",
+    eventType: "Water Level Rise",
+    type: "Thunderstorm",
+    icon: "⛈️",
+    severity: "Moderate",
+    lat: 30.7010,
+    lng: 79.0600,
+    time: "14:10 IST",
+    count: 8,
+    description: "Continuous lightning and heavy thunder over mountain ridge.",
+    missingElements: ["Early Warning"],
+    problemsFaced: "We didn't know the water was rising until it hit the bridge.",
+    missingInfo: "Water level upstream.",
+    warningTime: "No warning",
+    helpfulAdditions: "An SMS alert system."
+  },
+  {
+    id: "rep-4",
+    eventDate: "2026-08-10",
+    submissionDate: "2026-08-12",
+    location: "Rudraprayag",
+    eventType: "Flash Flood",
+    type: "Flooding",
+    icon: "🌊",
+    severity: "Severe",
+    lat: 30.2844,
+    lng: 78.9811,
+    time: "10:00 IST",
+    count: 4,
+    description: "Historical feedback event.",
+    missingElements: ["Communication / Network", "Clear evacuation instructions"],
+    problemsFaced: "Total chaos, no one knew where to go. Networks were dead.",
+    missingInfo: "Evacuation timing and nearby danger.",
+    warningTime: "No warning",
+    helpfulAdditions: "Better disaster preparedness training for locals."
+  },
+  {
+    id: "rep-5",
+    eventDate: "2025-06-20",
+    submissionDate: "2025-06-25",
+    location: "Kedarnath",
+    eventType: "Cloudburst",
+    type: "Other Emergency",
+    icon: "⚠️",
+    severity: "Severe",
+    lat: 30.7346,
+    lng: 79.0669,
+    time: "06:00 IST",
+    count: 100,
+    description: "Historical 2025 event.",
+    missingElements: ["Early Warning", "Emergency Services", "Shelter"],
+    problemsFaced: "Massive devastation. We had no warning at all.",
+    missingInfo: "Everything was missing.",
+    warningTime: "No warning",
+    helpfulAdditions: "Advance radar warnings and better shelters."
+  }
+];
+
+export const initialStationMessages = [
+  {
+    id: "msg-1",
+    sender: "Joshimath Station",
+    senderCode: "JSH-04",
+    time: "14:12 IST",
+    text: "Heavy cloud formation observed over Kedarnath ridge. Rainfall intensity increasing rapidly.",
+    isPriority: false,
+    status: "delivered"
+  },
+  {
+    id: "msg-2",
+    sender: "Kedarnath Weather Station",
+    senderCode: "KED-01",
+    time: "14:14 IST",
+    text: "AI model also indicates increasing severe weather risk (87% peak probability at 16:00). Doppler radar echo exceeds 52 dBZ.",
+    isPriority: false,
+    status: "delivered"
+  },
+  {
+    id: "msg-3",
+    sender: "Joshimath Station",
+    senderCode: "JSH-04",
+    time: "14:16 IST",
+    text: "Confirmed. Monitoring situation. Ground emergency responders at Sonprayag alerted.",
+    isPriority: false,
+    status: "delivered"
+  },
+  {
+    id: "msg-4",
+    sender: "State Disaster Control Room",
+    senderCode: "SDCR-HQ",
+    time: "14:18 IST",
+    text: "⚠️ PRIORITY: Rapid rainfall increase detected. Please verify local conditions & initiate public alert broadcast.",
+    isPriority: true,
+    status: "delivered"
+  }
+];
+
+export const aiModelMetrics = {
+  version: "Keraunos-AI v3.4.2",
+  leadTimeAvg: "3.4 Hours",
+  accuracyRate: "94.2%",
+  activeSensoryFeeds: "42 Satellites + 18 Doppler Radars + 124 AWS Units",
+  lastPredictionRun: "2 mins ago (14:28:10 IST)",
+  status: "ONLINE"
+};
