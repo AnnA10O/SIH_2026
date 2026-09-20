@@ -4,7 +4,7 @@ import geopandas as gpd
 from shapely.geometry import Point, box
 import numpy as np
 
-ROOT = Path("d:/SIH")
+ROOT = Path(__file__).resolve().parent.parent
 
 import math
 
