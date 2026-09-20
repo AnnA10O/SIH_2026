@@ -272,7 +272,7 @@ export default function App() {
             <RiskMap
               selectedLocation={selectedLocation}
               stations={liveStations}
-              communityReports={communityReports}
+              communityReports={reports}
               onSelectStation={(stn) => setSelectedLocation(stn)}
             />
           </div>
