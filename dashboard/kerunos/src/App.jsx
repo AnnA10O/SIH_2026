@@ -10,14 +10,14 @@ import FeedbackModal from "./components/FeedbackModal";
 import ReportsView from "./components/ReportsView";
 import ValidationDrawer from "./components/ValidationDrawer";
 import PinnView from "./components/PinnView";
-import { initialCommunityReports } from "./data/mockData";
+import { initialCommunityReports, monitoringLocations as defaultLocations } from "./data/mockData";
 
 // Removed all static imports from mockData.js
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("map");
-  const [monitoringLocations, setMonitoringLocations] = useState([]);
-  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [monitoringLocations, setMonitoringLocations] = useState(defaultLocations);
+  const [selectedLocation, setSelectedLocation] = useState(defaultLocations[0]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [liveStations, setLiveStations] = useState([]);
