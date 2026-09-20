@@ -94,8 +94,9 @@ class InferenceOrchestrator:
         now = time.time()
 
         
-        # We predict for all stations (physical + virtual grid)
-        for stn in ALL_STATIONS:
+        # We predict for physical stations to save memory on Render
+        from src.mosdac_live_daemon import PHYSICAL_STATIONS
+        for stn in PHYSICAL_STATIONS:
             stn_id = stn["id"]
             
             data = {}
