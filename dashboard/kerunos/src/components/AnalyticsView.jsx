@@ -43,7 +43,7 @@ export default function AnalyticsView() {
       description: "Data quality scores and staleness metrics for all integrated AWS and MOSDAC satellite feeds.",
       size: "5 KB",
       rows: "394",
-      icon: ShieldCheck = Database, // Fallback to Database
+      icon: Database,
       color: "text-amber-500",
       bg: "bg-amber-500/10"
     },
