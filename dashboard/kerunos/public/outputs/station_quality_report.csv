@@ -1,0 +1,44 @@
+station_id,lat,lon,n_raw_rows,status,reason,n_daily_valid,rain_max_daily_mm,monsoon_coverage_pct
+ISRO0021_15F015(Dibrugarh univ. Assam),27.4666666,94.9166666,1133,FAIL,insufficient monsoon-season coverage -- 7.0% < 20.0% required,0,,
+ISRO0062_15F03E(LAKHIMPUR),27.2041666,94.1069444,4312,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",170,49.0,22.131147540983605
+ISRO0064_15F040(Gawahati(KAHIKUCHI)),26.178888,91.71639,8479,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO0065_15F041(BONGAIGAON),26.523055,90.491111,3371,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",153,38.0,80.0
+ISRO0066_15F042(GOSSAIGAON),26.3908333,89.9405555,8446,PASS,"ok (type=daily_cumulative, spikes_clipped=23)",189,400.0,26.229508196721312
+ISRO0067_15F043(NALBARI),26.4358333,91.335,4324,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",196,120.0,27.049180327868854
+ISRO0068_15F044(KARIMGUNJ),24.8547222,92.3044444,5639,FAIL,stuck -- only 2 unique daily increments in entire record,0,,
+ISRO0069_15F045(ARUNACHAL),24.8541666,92.7388888,6654,PASS,"ok (type=daily_cumulative, spikes_clipped=8)",171,400.0,24.18032786885246
+ISRO0073_15F049(BOKO),25.9919444,91.2513888,3988,FAIL,"dead -- 92% zeros, max monsoon rainfall 6.0mm < 10.0mm threshold",0,,
+ISRO0074_15F04A(GOLAPARA),26.1869444,90.5680555,3764,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO0075_15F04B(MANGALDOI),26.4444444,92.0063888,28,FAIL,no_data -- zero valid rain increments after processing,0,,
+ISRO0076_15F04C(Dhubri),26.023333,89.96917,8776,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",201,61.0,27.86885245901639
+ISRO0077_15F04D(Diphu),25.833055,93.5,2301,FAIL,stuck -- only 2 unique daily increments in entire record,0,,
+ISRO0080_15F050(Lahdoigarh.(jorhat)),26.784,94.344,2993,FAIL,"mislabeled -- |corr(rain, sunshine)| = 0.62 > 0.5 (cross-talk pattern)",0,,
+ISRO0092_15F05C(SILGHAT),26.6333333,93.1333333,2344,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO0093_15F05D(MARGHERIETA),27.2669444,95.6516666,1,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO0094_15F05E(KHAJIRANGA),26.5719444,93.3869444,2,FAIL,no_data -- zero valid rain increments after processing,0,,
+ISRO0095_15F05F(JORHAT(neist)),26.738333,94.159,2327,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO0096_15F060(GOLAGHAT),26.4888888,93.4369444,2624,FAIL,insufficient monsoon-season coverage -- 16.4% < 20.0% required,0,,
+ISRO0097_15F061(VISWANATH CHARAL),26.7219444,93.1519444,1,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO0099_15F063(SIBSAGAR),26.9244444,94.7366666,2057,FAIL,no monsoon-season data (Jun-Sep) at all,0,,
+ISRO0100_15F064(NELI),26.0847222,92.3044444,3,FAIL,no_data -- zero valid rain increments after processing,0,,
+ISRO0107_15F06B(TINSUKIA),27.4602777,95.3172222,1967,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1064_15F428(TRA. Silcuri),24.733055,92.787224,1715,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1068_15F42C(TRA. Jorhat),26.730833,94.22667,4098,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",166,169.0,21.721311475409834
+ISRO1069_15F42D(TRA. Dikom),27.466667,95.08889,7338,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",213,136.0,29.508196721311474
+ISRO1071_15F42F(Ananda),27.44861,94.22945,4552,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",205,210.0,27.86885245901639
+ISRO1072_15F430(Nagrijuli),26.713612,91.67555,526,FAIL,stuck -- only 2 unique daily increments in entire record,0,,
+ISRO1073_15F431(Gingia),26.083055,93.01639,217,FAIL,insufficient monsoon-season coverage -- 12.7% < 20.0% required,0,,
+ISRO1074_15F432(Salonah),26.445833,92.975,6728,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",201,187.0,27.86885245901639
+ISRO1101_15F44D(Regional Science Centre. Khanpara. Guwhathi),26.120556,91.81639,3227,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",171,85.0,83.33333333333334
+ISRO1102_15F44E(North Guwhathi College. North Guwhathi),26.202223,91.715836,5986,PASS,"ok (type=daily_cumulative, spikes_clipped=13)",199,400.0,29.098360655737704
+ISRO1103_15F44F(Goalpara Degree College.Goalpara),26.171389,90.62722,4275,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1104_15F450(Dhemaji Degree College. Dhemaji),27.475555,94.55167,8743,PASS,"ok (type=daily_cumulative, spikes_clipped=7)",193,400.0,27.459016393442624
+ISRO1106_15F452(Rangiya Degree College. Rangiya),26.426945,91.61389,8799,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",189,246.0,26.229508196721312
+ISRO1107_15F453(Assam Science Technology & Engironment Council. Christan Bhasti. Guwhati),26.161388,91.77333,4081,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1108_15F454(Majuli Degree College. Kamalabari. Majuli),26.952778,94.17083,2368,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1109_15F455(Sonari Degree College. Sonari. Sivsagar),27.028334,95.024445,8446,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1110_15F456(Duliajan Degree College. Duliajan),27.344723,95.313614,6728,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1111_15F457(Sadiya Govt Higher Secondary School . Sadiya),27.908056,95.76667,1261,FAIL,stuck -- only 1 unique daily increments in entire record,0,,
+ISRO1112_15F458(President. Gharowa. Lumding),25.751112,93.178055,8719,PASS,"ok (type=daily_cumulative, spikes_clipped=0)",189,261.0,26.229508196721312
+ISRO1113_15F459(Higher Secondary School. Hamren.),25.854166,92.586945,73,FAIL,stuck -- only 2 unique daily increments in entire record,0,,
+ISRO1114_15F45A(Sri Kishan Sarda Degree College HailaKandi.),24.69111,92.56472,1289,FAIL,"dead -- 93% zeros, max monsoon rainfall 0.0mm < 10.0mm threshold",0,,

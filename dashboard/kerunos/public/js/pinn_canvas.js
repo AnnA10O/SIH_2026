@@ -216,9 +216,12 @@ function getCellLatLon(r, c, ny, nx, anchors) {
 async function fetchPINNData(regionKey) {
   const normalizedKey = REGION_KEY_MAP[regionKey.toLowerCase()] || regionKey;
   const timestamp = Date.now();
-  const apiEndpoint = `http://localhost:8000/api/pinn/${normalizedKey}?t=${timestamp}`;
-  const localFallback = `outputs/pinn_3d_multi_region_FINAL.json?t=${timestamp}`;
-  const relativeFallback = `../outputs/pinn_3d_multi_region_FINAL.json?t=${timestamp}`;
+  const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:8000' 
+      : 'https://sih-2026-k1hc.onrender.com';
+  const apiEndpoint = `${baseUrl}/api/pinn/${normalizedKey}`;
+  const localFallback = `/outputs/pinn_3d_multi_region_REAL_UNDERTRAINED.json?t=${timestamp}`;
+  const relativeFallback = `../outputs/pinn_3d_multi_region_REAL_UNDERTRAINED.json?t=${timestamp}`;
 
   try {
     const res = await fetch(apiEndpoint);
