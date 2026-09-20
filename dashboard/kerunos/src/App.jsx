@@ -232,7 +232,7 @@ export default function App() {
       {showLanding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
           <iframe 
-            src="./landing.html" 
+            src="/landing.html" 
             className="w-full h-full border-none absolute inset-0" 
             title="Landing Page"
           />
