@@ -260,10 +260,11 @@ export default function App() {
         {/* TAB 2: FULL-SCREEN RISK MAP VIEW */}
         {activeTab === "map" && (
           <div className="h-full w-full animate-in fade-in duration-300">
-            <iframe 
-              src="/UI/realtime/index.html" 
-              className="w-full h-full border-none" 
-              title="Realtime Simulation UI (Map)"
+            <RiskMap
+              selectedLocation={selectedLocation}
+              stations={liveStations}
+              communityReports={communityReports}
+              onSelectStation={(stn) => setSelectedLocation(stn)}
             />
           </div>
         )}
@@ -324,12 +325,9 @@ export default function App() {
 
         {/* TAB 7: STATISTICAL ANALYTICS VIEW */}
         {activeTab === "analytics" && (
-          <div className="h-full w-full animate-in fade-in duration-300 relative">
-             <iframe 
-               src="./weather_statistical_analytics.html" 
-               className="w-full h-full border-none absolute inset-0 bg-slate-50" 
-               title="Statistical Analytics"
-             />
+          <div className="h-full w-full animate-in fade-in duration-300 relative p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Statistical Analytics</h2>
+            <p className="text-sm text-slate-500">Analytics dashboard — coming soon in a future update.</p>
           </div>
         )}
 
