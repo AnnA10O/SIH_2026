@@ -26,101 +26,7 @@ export default function App() {
   const retryDelayRef = useRef(5000); // start at 5s, back off to 30s
   const retryTimerRef = useRef(null);
 
-  // Continuously poll backend — with exponential backoff when offline
-  useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    let intervalId = null;
-
-    const fetchNowcast = async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/nowcast`);
-        if (res.ok) {
-          let data = await res.json();
-          setBackendOnline(true);
-          retryDelayRef.current = 5000; // reset backoff on success
-
-          if (simulateDisaster && data.length > 0) {
-              let targetIdx = data.findIndex(d => !d.is_virtual);
-              if (targetIdx !== -1) simulateTargetRef.current = data[targetIdx].id;
-          } else {
-              simulateTargetRef.current = null;
-          }
-
-          setLiveStations(data);
-          
-          if (data && data.length > 0) {
-            const dynamicLocations = data
-              .filter(d => !d.is_virtual)
-              .map(d => ({
-                id: d.id,
-                name: expandStationName(d.id),
-                lat: d.lat,
-                lng: d.lng,
-                zoom: 11,
-                riskLevel: d.tier.toUpperCase(),
-                gate_a: d.gate_a,
-                gate_b: d.gate_b,
-                P_CB: d.P_CB,
-                metrics: d.metrics
-              }));
-
-            if (dynamicLocations.length > 0) {
-              setMonitoringLocations(dynamicLocations);
-            }
-
-            const maxProb = Math.max(...data.map(d => d.P_CB || 0));
-            let level = "LOW";
-            if (maxProb >= 0.85) level = "SEVERE";
-            else if (maxProb >= 0.65) level = "HIGH";
-            else if (maxProb >= 0.35) level = "MODERATE";
-            
-            setSelectedLocation(prev => {
-              const base = prev || dynamicLocations.sort((a, b) => b.riskScore - a.riskScore)[0] || dynamicLocations[0];
-              return {
-                ...base,
-                riskLevel: level,
-                riskPercent: Math.round(maxProb * 100),
-                riskScore: maxProb
-              };
-            });
-          }
-
-          // Switch to 15s polling when online
-          if (intervalId) clearInterval(intervalId);
-          intervalId = setInterval(fetchNowcast, 15000);
-        } else {
-          throw new Error(`HTTP ${res.status}`);
-        }
-      } catch (err) {
-        console.warn(`Backend offline, retrying in ${retryDelayRef.current / 1000}s...`, err.message);
-        setBackendOnline(false);
-        // Exponential backoff: 5s → 10s → 30s max
-        if (intervalId) clearInterval(intervalId);
-        retryTimerRef.current = setTimeout(() => {
-          retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30000);
-          fetchNowcast();
-        }, retryDelayRef.current);
-      }
-    };
-
-    fetchNowcast();
-
-    // Fetch AI metrics once on mount
-    const fetchMetrics = async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/metrics`);
-        if (res.ok) setAiModelMetrics(await res.json());
-      } catch (err) {
-        console.error("Failed to fetch metrics:", err);
-      }
-    };
-    fetchMetrics();
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-    };
-  }, []);
+  // Backend polling is defined below, after simulateDisaster/simulateTargetRef are declared;
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -182,6 +88,91 @@ export default function App() {
       body: JSON.stringify({ active: simulateDisaster, target_station: simulateTargetRef.current || "UK-6" })
     }).catch(console.error);
   }, [simulateDisaster]);
+
+  // Backend polling — placed here so simulateDisaster & simulateTargetRef are in scope
+  useEffect(() => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    let intervalId = null;
+
+    const fetchNowcast = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/nowcast`);
+        if (res.ok) {
+          let data = await res.json();
+          setBackendOnline(true);
+          retryDelayRef.current = 5000;
+
+          if (simulateDisaster && data.length > 0) {
+            let targetIdx = data.findIndex(d => !d.is_virtual);
+            if (targetIdx !== -1) simulateTargetRef.current = data[targetIdx].id;
+          } else {
+            simulateTargetRef.current = null;
+          }
+
+          setLiveStations(data);
+
+          if (data && data.length > 0) {
+            const dynamicLocations = data
+              .filter(d => !d.is_virtual)
+              .map(d => ({
+                id: d.id,
+                name: expandStationName(d.id),
+                lat: d.lat,
+                lng: d.lng,
+                zoom: 11,
+                riskLevel: d.tier.toUpperCase(),
+                gate_a: d.gate_a,
+                gate_b: d.gate_b,
+                P_CB: d.P_CB,
+                metrics: d.metrics
+              }));
+
+            if (dynamicLocations.length > 0) setMonitoringLocations(dynamicLocations);
+
+            const maxProb = Math.max(...data.map(d => d.P_CB || 0));
+            let level = "LOW";
+            if (maxProb >= 0.85) level = "SEVERE";
+            else if (maxProb >= 0.65) level = "HIGH";
+            else if (maxProb >= 0.35) level = "MODERATE";
+
+            setSelectedLocation(prev => {
+              const base = prev || dynamicLocations[0];
+              return { ...base, riskLevel: level, riskPercent: Math.round(maxProb * 100), riskScore: maxProb };
+            });
+          }
+
+          if (intervalId) clearInterval(intervalId);
+          intervalId = setInterval(fetchNowcast, 15000);
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        console.warn(`Backend offline, retrying in ${retryDelayRef.current / 1000}s...`, err.message);
+        setBackendOnline(false);
+        if (intervalId) clearInterval(intervalId);
+        retryTimerRef.current = setTimeout(() => {
+          retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30000);
+          fetchNowcast();
+        }, retryDelayRef.current);
+      }
+    };
+
+    fetchNowcast();
+
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/metrics`);
+        if (res.ok) setAiModelMetrics(await res.json());
+      } catch (err) { console.error("Failed to fetch metrics:", err); }
+    };
+    fetchMetrics();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Helper for expanding names
   const expandStationName = (id) => {
