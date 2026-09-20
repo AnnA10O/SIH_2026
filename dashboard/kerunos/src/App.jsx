@@ -27,8 +27,8 @@ export default function App() {
   useEffect(() => {
     const fetchNowcast = async () => {
       try {
-        // Our backend runs on localhost:8000 when launched via run_dashboard.py
-        const res = await fetch("http://localhost:8000/api/nowcast");
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/nowcast`);
         if (res.ok) {
           let data = await res.json();
           
@@ -92,7 +92,8 @@ export default function App() {
     // Fetch AI metrics once on mount
     const fetchMetrics = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/metrics");
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/metrics`);
         if (res.ok) setAiModelMetrics(await res.json());
       } catch (err) {
         console.error("Failed to fetch metrics:", err);
@@ -156,7 +157,8 @@ export default function App() {
     if (simulateDisaster) {
        simulateTargetRef.current = "UK-" + (Math.floor(Math.random() * 8) + 1);
     }
-    fetch('http://localhost:8000/api/simulate', {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    fetch(`${baseUrl}/api/simulate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: simulateDisaster, target_station: simulateTargetRef.current || "UK-6" })

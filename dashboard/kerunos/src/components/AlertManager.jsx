@@ -120,7 +120,8 @@ export default function AlertManager({ locations = [], defaultLocation }) {
     
     try {
       const promises = selectedLocations.map(loc => {
-        return fetch('/api/alerts/send', {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        return fetch(`${baseUrl}/api/alerts/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
