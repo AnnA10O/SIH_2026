@@ -350,9 +350,20 @@ def main():
     if os.environ.get("PORT") or os.environ.get("RENDER") or os.environ.get("RAILWAY_ENVIRONMENT"):
         print("[INFO] Production deployment detected. Skipping interactive UI launcher.")
         print("[INFO] Server is running in the background. Press Ctrl+C to stop.")
-        # Eagerly initialize the inference orchestrator (and daemons) in production
-        import src.inference_server
-        src.inference_server.handle_api_request()
+        
+        # Eagerly initialize the inference orchestrator in a background thread
+        # This prevents the CPU-heavy initialization (PyTorch, GeoPandas) from blocking the GIL
+        # and causing Render healthchecks to timeout before the server thread can accept() TCP connections.
+        def eager_init():
+            try:
+                import src.inference_server
+                src.inference_server.handle_api_request()
+            except Exception as e:
+                print(f"[ERROR] Eager init failed: {e}")
+                
+        init_thread = threading.Thread(target=eager_init, daemon=True)
+        init_thread.start()
+        
         try:
             while True:
                 time.sleep(1)
