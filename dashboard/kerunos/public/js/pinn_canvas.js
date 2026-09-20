@@ -587,7 +587,7 @@ async function loadPINNRegion(regionKey) {
   }
 
   // Print live metrics log for integrity verification
-  console.log(`[PINN Data Verification Log] Region: ${data.region_name} | Depth: ${data.peak_water_depth_m}m | Speed: ${data.peak_flow_speed_ms}m/s | Area: ${data.flooded_area_km2}km²`);
+  console.log(`[PINN Data Verification Log] Region: ${data.region_name} | Depth: ${data.peak_water_depth_m}m | Speed: ${data.peak_velocity_m_s}m/s | Area: ${data.flooded_area_km2}km²`);
 }
 
 // ── REGION SWITCHER HANDLER ──────────────────────────────────────────────────
