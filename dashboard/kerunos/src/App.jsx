@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
-import AnalyticsView from "./components/AnalyticsView";
 import RiskPeakGraph from "./components/RiskPeakGraph";
 import WeatherDetailsCards from "./components/WeatherDetailsCards";
 import AlertManager from "./components/AlertManager";
@@ -332,8 +331,12 @@ export default function App() {
 
         {/* TAB 7: STATISTICAL ANALYTICS VIEW */}
         {activeTab === "analytics" && (
-          <div className="h-full w-full animate-in fade-in duration-300 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-            <AnalyticsView />
+          <div className="h-full w-full animate-in fade-in duration-300 relative">
+             <iframe 
+               src="/weather_statistical_analytics.html" 
+               className="w-full h-full border-none absolute inset-0 bg-slate-50" 
+               title="Statistical Analytics"
+             />
           </div>
         )}
 
