@@ -10,6 +10,7 @@ import FeedbackModal from "./components/FeedbackModal";
 import ReportsView from "./components/ReportsView";
 import ValidationDrawer from "./components/ValidationDrawer";
 import PinnView from "./components/PinnView";
+import { initialCommunityReports } from "./data/mockData";
 
 // Removed all static imports from mockData.js
 
@@ -174,7 +175,7 @@ export default function App() {
   const [messages, setMessages] = useState([]);
 
   // Dynamic state for Citizen Ground Reports
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState(initialCommunityReports);
 
   // Modal control
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);

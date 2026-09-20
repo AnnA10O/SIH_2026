@@ -126,7 +126,7 @@ export default function AlertManager({ locations = [], defaultLocation }) {
           body: JSON.stringify({
             region: loc.name || loc.region || "Unknown Region",
             tier: getTier(loc.riskLevel),
-            risk_score: loc.riskScore || 0,
+            risk_score: loc.riskPercent || loc.riskScore || 0,
             message: messageContents[loc.id] || ""
           })
         }).then(r => r.json());
