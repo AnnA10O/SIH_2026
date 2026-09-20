@@ -13,7 +13,7 @@ import webbrowser
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -32,8 +32,10 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 alert_data = json.loads(post_data.decode('utf-8'))
                 
                 from src.alert_sender import send_alert_to_receiver
-                receiver_ip = "10.210.48.78"
-                receiver_port = 8080
+                import os
+                receiver_ip = os.environ.get("ALERT_RECEIVER_IP", "10.110.194.78")
+                receiver_port = int(os.environ.get("ALERT_RECEIVER_PORT", "8080"))
+
                 
                 # send_alert_to_receiver also saves it to history
                 result = send_alert_to_receiver(receiver_ip, receiver_port, alert_data)
@@ -336,6 +338,21 @@ def main():
     print("=" * 66)
     print(f" Local Web Server active at: http://localhost:{PORT}/")
     print("-" * 66)
+    
+    # If we are in a PaaS environment (Render/Railway), skip the blocking CLI menu
+    if os.environ.get("PORT") or os.environ.get("RENDER") or os.environ.get("RAILWAY_ENVIRONMENT"):
+        print("[INFO] Production deployment detected. Skipping interactive UI launcher.")
+        print("[INFO] Server is running in the background. Press Ctrl+C to stop.")
+        # Eagerly initialize the inference orchestrator (and daemons) in production
+        import src.inference_server
+        src.inference_server.handle_api_request()
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\n[INFO] Shutting down server. Goodbye!")
+            sys.exit(0)
+
     print(" Select which UI you would like to run:")
     print("  [1] Older UI (Mission Control & PINN Handoff)  -> dashboard/older_ui.html")
     print("  [2] Newer UI (Kerunos AI NOWCAST Dashboard)    -> dashboard/newer_ui.html")
