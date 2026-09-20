@@ -214,9 +214,11 @@ class InferenceOrchestrator:
 
 # Singleton
 _orchestrator = None
+init_lock = __import__('threading').Lock()
 
 def handle_api_request():
     global _orchestrator
-    if _orchestrator is None:
-        _orchestrator = InferenceOrchestrator()
+    with init_lock:
+        if _orchestrator is None:
+            _orchestrator = InferenceOrchestrator()
     return _orchestrator.predict_nowcast()

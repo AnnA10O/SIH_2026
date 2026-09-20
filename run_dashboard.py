@@ -328,7 +328,8 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
 
-class QuietServer(socketserver.TCPServer):
+class QuietServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    daemon_threads = True
     def handle_error(self, request, client_address):
         import sys
         exctype, value = sys.exc_info()[:2]
