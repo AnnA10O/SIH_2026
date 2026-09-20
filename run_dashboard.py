@@ -27,7 +27,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200, "ok")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "X-Requested-With, Content-type")
+        self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
 
     def do_POST(self):
@@ -87,6 +87,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"status": "success", "simulation_active": active, "target": target_station}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(str(e).encode("utf-8"))
             return
@@ -116,6 +117,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 import traceback
                 traceback.print_exc()
                 self.send_response(500)
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(str(e).encode("utf-8"))
             return
@@ -142,6 +144,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 traceback.print_exc()
                 try:
                     self.send_response(500)
+                    self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                     self.wfile.write(str(e).encode("utf-8"))
                 except:
@@ -166,6 +169,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 traceback.print_exc()
                 try:
                     self.send_response(500)
+                    self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                     self.wfile.write(str(e).encode("utf-8"))
                 except:
@@ -206,6 +210,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 traceback.print_exc()
                 try:
                     self.send_response(500)
+                    self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                     self.wfile.write(str(e).encode("utf-8"))
                 except:
@@ -246,6 +251,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 traceback.print_exc()
                 try:
                     self.send_response(500)
+                    self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                     self.wfile.write(str(e).encode("utf-8"))
                 except:
@@ -312,6 +318,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 traceback.print_exc()
                 try:
                     self.send_response(500)
+                    self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                     self.wfile.write(str(e).encode("utf-8"))
                 except:
@@ -331,7 +338,7 @@ class QuietServer(socketserver.TCPServer):
 
 def start_server():
     QuietServer.allow_reuse_address = True
-    with QuietServer(("", PORT), QuietHandler) as httpd:
+    with QuietServer(("0.0.0.0", PORT), QuietHandler) as httpd:
         httpd.serve_forever()
 
 
