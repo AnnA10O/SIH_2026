@@ -77,7 +77,7 @@ export default function PinnView() {
     const loadScripts = async () => {
       await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
       await loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js");
-      await loadScript("./js/pinn_canvas.js?v=20260915_v4");
+      await loadScript("/js/pinn_canvas.js?v=20260915_v4");
       
       if (window.initFloodCanvas) {
         window.initFloodCanvas();

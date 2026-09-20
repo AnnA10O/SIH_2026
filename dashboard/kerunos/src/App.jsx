@@ -81,7 +81,7 @@ export default function App() {
     if (simulateDisaster) {
        simulateTargetRef.current = "UK-" + (Math.floor(Math.random() * 8) + 1);
     }
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
     fetch(`${baseUrl}/api/simulate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -89,9 +89,8 @@ export default function App() {
     }).catch(console.error);
   }, [simulateDisaster]);
 
-  // Backend polling — placed here so simulateDisaster & simulateTargetRef are in scope
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
     let intervalId = null;
 
     const fetchNowcast = async () => {

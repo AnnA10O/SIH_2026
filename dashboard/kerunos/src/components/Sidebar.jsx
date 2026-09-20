@@ -41,7 +41,7 @@ export default function Sidebar({
   useEffect(() => {
     const fetchTelemetry = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
         const res = await fetch(`${baseUrl}/api/telemetry`);
         if (res.ok) {
           setTelemetry(await res.json());
