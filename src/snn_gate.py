@@ -37,7 +37,7 @@ class BaseSNNGate(nn.Module):
     Direct current injection across T simulation timesteps.
     """
     def __init__(self, in_features: int, hidden_neurons: int = 12,
-                 beta: float = 0.5, v_thresh: float = 1.0, num_steps: int = 5):
+                 beta: float = 0.5, v_thresh: float = 0.45, num_steps: int = 5):
         super().__init__()
         self.in_features = in_features
         self.hidden_neurons = hidden_neurons
@@ -98,7 +98,7 @@ class CloudburstSNNGate:
     # Normalization scales: 100mm/hr rain, 60mm/hr^2 accel, 30mm delta_R, 40mm delta_RI
     SCALES = np.array([100.0, 60.0, 30.0, 40.0], dtype=np.float32)
 
-    def __init__(self, beta: float = 0.50, v_thresh: float = 1.0):
+    def __init__(self, beta: float = 0.50, v_thresh: float = 0.45):
         self.beta = beta
         self.model = BaseSNNGate(in_features=4, hidden_neurons=12,
                                  beta=beta, v_thresh=v_thresh, num_steps=5)
@@ -185,7 +185,7 @@ class ThunderstormSNNGate:
     # Normalization scales: +5mm/hr IWV, -3hPa pressure drop, 10m/s wind shift, 4C temp drop, 500 J/kg CAPE rise
     SCALES = np.array([5.0, 3.0, 10.0, 4.0, 500.0], dtype=np.float32)
 
-    def __init__(self, beta: float = 0.88, v_thresh: float = 1.0):
+    def __init__(self, beta: float = 0.88, v_thresh: float = 0.45):
         self.beta = beta
         self.model = BaseSNNGate(in_features=5, hidden_neurons=12,
                                  beta=beta, v_thresh=v_thresh, num_steps=5)
@@ -257,7 +257,7 @@ class SNNNeuromorphicGate:
     Maintains dormant state (15-min sampling) during quiescent conditions,
     and escalates to ACTIVE state (5-min telemetry & localized satellite pull) upon spiking.
     """
-    def __init__(self, station_id: str, tau_minutes: float = 15.0, v_thresh: float = 1.0, v_reset: float = 0.0):
+    def __init__(self, station_id: str, tau_minutes: float = 15.0, v_thresh: float = 0.45, v_reset: float = 0.0):
         self.station_id = station_id
         self.tau_minutes = tau_minutes
         self.v_thresh = v_thresh
