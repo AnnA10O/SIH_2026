@@ -7,7 +7,7 @@ import StationChat from "./components/StationChat";
 import AuthorityReportsPanel from "./components/AuthorityReportsPanel";
 import FeedbackModal from "./components/FeedbackModal";
 import ReportsView from "./components/ReportsView";
-import ValidationDrawer from "./components/ValidationDrawer";
+
 import PinnView from "./components/PinnView";
 import { initialCommunityReports, monitoringLocations as defaultLocations } from "./data/mockData";
 
@@ -340,8 +340,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Fixed Collapsible Bottom Drawer: Model performance & validation */}
-        <ValidationDrawer metrics={aiModelMetrics} />
+
       </main>
 
       {/* Ground Feedback Modal */}
