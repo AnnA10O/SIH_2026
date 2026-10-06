@@ -263,7 +263,9 @@ class SNNNeuromorphicGate:
         self.v_thresh = v_thresh
         self.v_reset = v_reset
         beta = math.exp(-15.0 / max(1.0, tau_minutes))
-        self.gate = CloudburstSNNGate(beta=beta, v_thresh=v_thresh)
+        beta_ts = math.exp(-15.0 / 60.0) # Long tau for Gate B
+        self.gate_a = CloudburstSNNGate(beta=beta, v_thresh=v_thresh)
+        self.gate_b = ThunderstormSNNGate(beta=beta_ts, v_thresh=v_thresh)
         self.state = "DORMANT"
         self.active_steps = 0
         self.total_evals = 0
@@ -273,9 +275,24 @@ class SNNNeuromorphicGate:
     def step(self, feat: Dict) -> Dict:
         """Process streaming reading, update membrane potential, check spike threshold."""
         self.total_evals += 1
-        res = self.gate.evaluate(feat)
-        fired = res["fired_spike"]
-        self.v_mem = res["membrane_potential"]
+        res_a = self.gate_a.evaluate(feat)
+        
+        # Map features for Gate B if they exist under different names
+        gate_b_feat = feat.copy()
+        if "iwv_delta" in feat:
+            gate_b_feat["IWV_trend"] = feat["iwv_delta"]
+            
+        res_b = self.gate_b.evaluate(gate_b_feat)
+        
+        fired = res_a["fired_spike"] or res_b["fired_spike"]
+        self.v_mem = max(res_a["membrane_potential"], res_b["membrane_potential"])
+        
+        xai_log = ""
+        if res_a["fired_spike"]:
+            xai_log += res_a["xai_log"] + " "
+        if res_b["fired_spike"]:
+            xai_log += res_b["xai_log"]
+
 
         if fired:
             self.total_spikes += 1
@@ -299,7 +316,7 @@ class SNNNeuromorphicGate:
             "recommended_sampling_interval_min": recommended_interval,
             "trigger_satellite_tile": trigger_sat,
             "active_steps": self.active_steps,
-            "xai_log": res.get("xai_log", "")
+            "xai_log": xai_log.strip()
         }
 
 
